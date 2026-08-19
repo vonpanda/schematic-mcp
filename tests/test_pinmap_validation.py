@@ -10,31 +10,37 @@ def _graph() -> CircuitGraph:
     return CircuitGraph(KiCadSchematicParser().parse(EXAMPLE))
 
 
-def test_validate_pinmap_detects_firmware_mismatch_by_symbolic_pin_name():
+def test_validate_pinmap_detects_swapped_firmware_assignments():
     result = _graph().validate_pinmap(
         "U1",
         {
             "GPIO8": "I2C_SDA",
             "GPIO9": "I2C_SCL",
-            "GPIO12": "SENSOR_INT",
-            "GPIO13": "STATUS_LED",
+            "GPIO12": "LED_STATUS",
+            "GPIO13": "SENSOR_INT",
         },
     )
 
     assert result["ok"] is False
     assert result["summary"] == {
         "total": 4,
-        "matched": 3,
-        "failed": 1,
-        "mismatched": 1,
+        "matched": 2,
+        "failed": 2,
+        "mismatched": 2,
         "missing": 0,
         "unconnected": 0,
         "ambiguous": 0,
     }
-    mismatch = next(check for check in result["checks"] if check["status"] == "mismatch")
-    assert mismatch["identifier"] == "GPIO13"
-    assert mismatch["expected_net"] == "STATUS_LED"
-    assert mismatch["actual_net"] == "LED_STATUS"
+
+    mismatches = {
+        check["identifier"]: (check["expected_net"], check["actual_net"])
+        for check in result["checks"]
+        if check["status"] == "mismatch"
+    }
+    assert mismatches == {
+        "GPIO12": ("LED_STATUS", "SENSOR_INT"),
+        "GPIO13": ("SENSOR_INT", "LED_STATUS"),
+    }
 
 
 def test_validate_pinmap_accepts_physical_pin_number():
