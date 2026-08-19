@@ -1,5 +1,7 @@
 # schematic-mcp
 
+[![CI](https://github.com/vonpanda/schematic-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/vonpanda/schematic-mcp/actions/workflows/ci.yml)
+
 **Hardware schematic context for AI agents via MCP.**
 
 `schematic-mcp` lets MCP-compatible agents inspect hardware schematics as structured electrical data instead of treating them as screenshots or long blobs of text.
@@ -17,6 +19,8 @@ An AI coding agent writing firmware often needs answers such as:
 
 The server parses the EDA file deterministically, builds a canonical component/pin/net model, and exposes that model through MCP tools and resources.
 
+The design principle is conservative: when connectivity cannot be resolved confidently, surface a warning instead of inventing an electrical connection.
+
 ## V0.1 features
 
 - Parse modern KiCad `.kicad_sch` S-expression files
@@ -31,6 +35,7 @@ The server parses the EDA file deterministically, builds a canonical component/p
 - Expose the current canonical model as MCP resources
 - Restrict filesystem access with `SCHEMATIC_MCP_ROOT` or `--root`
 - Run locally over stdio or Streamable HTTP
+- Automated parser, graph and filesystem-boundary tests in GitHub Actions
 
 ## MCP tools
 
@@ -47,6 +52,7 @@ The server parses the EDA file deterministically, builds a canonical component/p
 | `get_mcu_pinmap(reference)` | Return a compact pin-to-net map |
 
 Resources:
+
 - `schematic://current/summary`
 - `schematic://current/model`
 
@@ -63,7 +69,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-The project uses the current stable v2 line of the official MCP Python SDK.
+The project uses the stable v2 line of the official MCP Python SDK.
 
 ## Run
 
@@ -84,6 +90,25 @@ You can restrict readable files without setting an environment variable:
 ```bash
 schematic-mcp --root /absolute/path/to/your/hardware-projects
 ```
+
+### Try the included fixture
+
+The repository contains a small synthetic KiCad schematic that is safe for demos and tests:
+
+```bash
+schematic-mcp --root "$PWD/examples"
+```
+
+Then an MCP-compatible client can call:
+
+```text
+open_schematic("minimal.kicad_sch")
+schematic_summary()
+list_components()
+trace_signal("U1", "1")
+```
+
+The example should resolve `U1.1` onto `SENSOR_OUT` and show `U2.1` as another endpoint. See [`examples/README.md`](examples/README.md).
 
 ### Streamable HTTP
 
@@ -124,13 +149,15 @@ trace_signal("U4", "12")
 
 ## Filesystem security
 
-By default, a local server can open paths accessible to its process. For agents you do not fully trust, set `SCHEMATIC_MCP_ROOT` or pass `--root` to an allowed project directory. Attempts to open files outside it are rejected.
+By default, a local server can open paths accessible to its process. For agents you do not fully trust, set `SCHEMATIC_MCP_ROOT` or pass `--root` to an allowed project directory. Attempts to open files outside it are rejected, including paths that resolve outside the allowed root.
+
+See [`SECURITY.md`](SECURITY.md) for vulnerability reporting and deployment guidance.
 
 ## Current limitations
 
 V0.1 is intentionally small. Hierarchical child sheets are discovered but not recursively merged into one cross-sheet graph yet. Unusual multi-unit/library constructs and third-party KiCad exports still need broader compatibility fixtures. Bus semantics are not reconstructed yet. PDF, Altium and EasyEDA are not implemented yet.
 
-When connectivity cannot be resolved confidently, the project should surface a warning rather than invent an electrical connection. `trace_signal` follows only resolved net connectivity; it does not assume that separate pins inside an IC are electrically connected.
+`trace_signal` follows only resolved net connectivity; it does not assume that separate pins inside an IC are electrically connected.
 
 ## Roadmap
 
@@ -143,9 +170,23 @@ When connectivity cannot be resolved confidently, the project should surface a w
 
 The long-term goal is a vendor-neutral **hardware context server for AI agents**.
 
+## Contributing
+
+Hardware engineers, embedded developers and EDA users can help most by contributing minimal compatibility fixtures, parser edge cases, tests, and real agent workflows.
+
+Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). Please never contribute proprietary customer schematics unless you have explicit permission to publish them.
+
+Useful maintainer/project docs:
+
+- [`docs/architecture.md`](docs/architecture.md) — parser/model/MCP architecture
+- [`examples/README.md`](examples/README.md) — runnable synthetic fixture
+- [`CHANGELOG.md`](CHANGELOG.md) — release history
+- [`SECURITY.md`](SECURITY.md) — security policy
+- [`docs/oss-readiness.md`](docs/oss-readiness.md) — public-adoption and OSS-program readiness checklist
+
 ## License and attribution
 
-Licensed under the **Apache License 2.0**. Commercial use, modification and redistribution are allowed under the license terms. Redistributions must preserve the applicable copyright, license and NOTICE information as required by Apache-2.0.
+Licensed under the **Apache License 2.0**. Commercial use, modification and redistribution are allowed under the license terms. Redistributions must preserve applicable copyright, license and NOTICE information as required by Apache-2.0.
 
 See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
