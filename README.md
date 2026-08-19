@@ -1,5 +1,7 @@
 # schematic-mcp
 
+<!-- mcp-name: io.github.vonpanda/schematic-mcp -->
+
 [![CI](https://github.com/vonpanda/schematic-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/vonpanda/schematic-mcp/actions/workflows/ci.yml)
 
 **Hardware schematic context for AI agents via MCP.**
