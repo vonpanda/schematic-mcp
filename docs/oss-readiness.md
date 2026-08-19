@@ -6,7 +6,7 @@ This document is a maintainer checklist for making `schematic-mcp` useful to the
 
 `schematic-mcp` turns hardware schematics into deterministic electrical context that MCP-compatible AI agents can query. The initial implementation focuses on modern KiCad `.kicad_sch` files and exposes components, pins, nets, signal tracing, MCU pin maps, and explicit firmware ↔ schematic pin-map validation without requiring an agent to infer connectivity from screenshots.
 
-The long-term direction is a vendor-neutral hardware context server spanning schematics, firmware pin definitions, BOM/PCB/manufacturing context, and multiple EDA ecosystems.
+The long-term direction is a vendor-neutral hardware context server spanning schematics, firmware pin definitions, BOM/PCB/manufacturing context, and multiple EDA ecosystems. See [`project-positioning.md`](project-positioning.md) for the full ecosystem thesis and project boundaries.
 
 ## Evidence we can claim today
 
@@ -17,15 +17,26 @@ Only claim facts that can be verified in the repository or public project histor
 - MCP tools/resources backed by a canonical circuit model;
 - modern KiCad parser;
 - automated tests across Python 3.10/3.11/3.12 and package-build verification;
+- MCP-client end-to-end test covering tool discovery, schematic loading, and structured firmware-validation output;
 - synthetic public schematic and firmware fixtures;
 - deterministic firmware ↔ schematic pin-map validation with a reproducible mismatch demo;
 - filesystem-root restriction for safer agent use;
 - security policy, contribution guidance, issue/PR templates, and public roadmap issues;
 - coding-agent maintenance rules in `AGENTS.md`;
 - automated dependency-maintenance configuration;
-- documented roadmap and architecture.
+- documented roadmap, architecture, and project positioning.
 
 Do **not** invent GitHub stars, download counts, users, contributors, production deployments, or external adoption.
+
+### Adoption baseline
+
+A first public baseline was recorded on **2026-08-19**, shortly after repository creation:
+
+- GitHub stars: **0**;
+- forks: **0**;
+- package-registry downloads: **not available yet** because no public package release has been published.
+
+This is a dated baseline, not a live metric. Future applications should use fresh public counts and keep the measurement date.
 
 ## Evidence to accumulate before applying
 
@@ -52,12 +63,14 @@ The strongest application will have real third-party evidence. Track these over 
 - [x] issue / pull request templates
 - [x] synthetic schematic fixture
 - [x] synthetic firmware ↔ schematic mismatch demo
+- [x] MCP-client end-to-end CI test
 - [x] public roadmap issues with scoped acceptance criteria
 - [x] coding-agent maintenance guide and dependency automation
+- [x] explicit ecosystem positioning and project boundaries
 - [ ] publish a tagged GitHub release
 - [ ] publish package to PyPI, if the package name is available
 - [ ] add at least one richer, redistributable real-world fixture
-- [ ] document an end-to-end MCP client demo with captured tool output
+- [ ] capture and publish a user-facing MCP client demo transcript/output
 
 ### 0.2 — meaningful hardware-agent workflow
 
@@ -98,7 +111,7 @@ A concise, truthful positioning statement:
 
 Coding agents increasingly modify embedded firmware while critical hardware context remains locked inside EDA files. A wrong GPIO, I2C assumption, power-domain assumption, or signal mapping can create failures that source-code-only reasoning cannot detect. A structured schematic context layer makes those constraints available to agents through deterministic tools.
 
-The public synthetic demo already demonstrates this class of failure: firmware swaps `SENSOR_INT` and `LED_STATUS` GPIO assignments while the schematic preserves the correct electrical mapping, and `validate_pinmap()` reports both mismatches explicitly.
+The public synthetic demo already demonstrates this class of failure: firmware swaps `SENSOR_INT` and `LED_STATUS` GPIO assignments while the schematic preserves the correct electrical mapping, and `validate_pinmap()` reports both mismatches explicitly. The repository's MCP-client end-to-end test verifies this flow through the actual SDK client/tool protocol path rather than only through internal Python helper calls.
 
 ## Credible API-credit use
 
