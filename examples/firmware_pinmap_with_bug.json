@@ -1,0 +1,6 @@
+{
+  "GPIO8": "I2C_SDA",
+  "GPIO9": "I2C_SCL",
+  "GPIO12": "SENSOR_INT",
+  "GPIO13": "STATUS_LED"
+}
