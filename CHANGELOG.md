@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Additional workspace and graph behavior tests.
 - Contributor-facing issue and pull request templates.
 - OSS readiness notes for maintainers.
+- Firmware ↔ schematic pin-map validation by physical pin number or symbolic pin name.
+- Synthetic ESP32-style firmware mismatch demo and regression tests.
 
 ## [0.1.0] - 2026-08-19
 
