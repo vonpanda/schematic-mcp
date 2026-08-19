@@ -121,6 +121,20 @@ def get_mcu_pinmap(reference: str) -> dict[str, Any]:
         return _error(exc)
 
 
+@mcp.tool()
+def validate_pinmap(reference: str, expected: dict[str, str]) -> dict[str, Any]:
+    """Compare firmware pin expectations with schematic nets.
+
+    ``expected`` maps either physical pin numbers or unique symbolic pin names to
+    expected net labels, for example ``{"GPIO8": "I2C_SDA"}``.
+    """
+    try:
+        _, graph = workspace.require()
+        return graph.validate_pinmap(reference, expected)
+    except Exception as exc:
+        return _error(exc)
+
+
 @mcp.resource("schematic://current/summary")
 def current_summary_resource() -> str:
     """Machine-readable summary of the current schematic."""
