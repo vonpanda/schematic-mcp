@@ -10,6 +10,7 @@
 
 - [`oss-readiness.md`](oss-readiness.md) — truthful capability/adoption evidence, milestones, and current Codex for Open Source criteria.
 - [`openai-codex-for-oss-application-draft.md`](openai-codex-for-oss-application-draft.md) — maintainer working draft aligned to the current 500-character OpenAI form fields. Refresh all live metrics and account fields before submission.
+- [`releasing.md`](releasing.md) — tokenless PyPI Trusted Publishing workflow, release rehearsal, and first-release checks.
 - [`mcp-registry-publishing.md`](mcp-registry-publishing.md) — publication gate and metadata/version requirements for the official MCP Registry after the PyPI release exists.
 - [`../AGENTS.md`](../AGENTS.md) — coding-agent architecture, safety, privacy, and contribution invariants.
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — contributor workflow.

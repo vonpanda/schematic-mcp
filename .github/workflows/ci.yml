@@ -28,3 +28,6 @@ jobs:
       - name: Build package
         if: matrix.python-version == '3.12'
         run: python -m build
+      - name: Check package metadata
+        if: matrix.python-version == '3.12'
+        run: python -m twine check dist/*
