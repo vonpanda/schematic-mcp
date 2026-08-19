@@ -4,7 +4,7 @@ This document is a maintainer checklist for making `schematic-mcp` useful to the
 
 ## Project value proposition
 
-`schematic-mcp` turns hardware schematics into deterministic electrical context that MCP-compatible AI agents can query. The initial implementation focuses on modern KiCad `.kicad_sch` files and exposes components, pins, nets, signal tracing, and MCU pin maps without requiring an agent to infer connectivity from screenshots.
+`schematic-mcp` turns hardware schematics into deterministic electrical context that MCP-compatible AI agents can query. The initial implementation focuses on modern KiCad `.kicad_sch` files and exposes components, pins, nets, signal tracing, MCU pin maps, and explicit firmware ↔ schematic pin-map validation without requiring an agent to infer connectivity from screenshots.
 
 The long-term direction is a vendor-neutral hardware context server spanning schematics, firmware pin definitions, BOM/PCB/manufacturing context, and multiple EDA ecosystems.
 
@@ -16,9 +16,13 @@ Only claim facts that can be verified in the repository or public project histor
 - working Python package and CLI entry point;
 - MCP tools/resources backed by a canonical circuit model;
 - modern KiCad parser;
-- automated tests and CI;
-- synthetic public example fixture;
+- automated tests across Python 3.10/3.11/3.12 and package-build verification;
+- synthetic public schematic and firmware fixtures;
+- deterministic firmware ↔ schematic pin-map validation with a reproducible mismatch demo;
 - filesystem-root restriction for safer agent use;
+- security policy, contribution guidance, issue/PR templates, and public roadmap issues;
+- coding-agent maintenance rules in `AGENTS.md`;
+- automated dependency-maintenance configuration;
 - documented roadmap and architecture.
 
 Do **not** invent GitHub stars, download counts, users, contributors, production deployments, or external adoption.
@@ -46,32 +50,68 @@ The strongest application will have real third-party evidence. Track these over 
 - [x] initial tests and CI
 - [x] security policy and contribution guidance
 - [x] issue / pull request templates
-- [x] synthetic demo fixture
+- [x] synthetic schematic fixture
+- [x] synthetic firmware ↔ schematic mismatch demo
+- [x] public roadmap issues with scoped acceptance criteria
+- [x] coding-agent maintenance guide and dependency automation
 - [ ] publish a tagged GitHub release
 - [ ] publish package to PyPI, if the package name is available
 - [ ] add at least one richer, redistributable real-world fixture
-- [ ] document an end-to-end agent demo with captured tool output
+- [ ] document an end-to-end MCP client demo with captured tool output
 
 ### 0.2 — meaningful hardware-agent workflow
 
 - [ ] hierarchical KiCad project graph
 - [ ] richer bus/net semantics
-- [ ] firmware ↔ schematic pin-map validation prototype
+- [x] firmware ↔ schematic pin-map validation prototype
+- [ ] framework-specific firmware pin extraction
 - [ ] compatibility matrix across representative KiCad versions/exporters
 
 ### Adoption milestone
 
 Before submitting an application that emphasizes usage, prefer real evidence such as external stars, issues, contributors, downstream references, or package downloads. If usage is still small, lead with technical/ecosystem importance and clearly label the project as early-stage.
 
+## Current Codex for Open Source application checklist
+
+Checked against the public OpenAI form on **2026-08-19**. Re-check the form before submitting because program terms and fields may change.
+
+Current form/criteria items relevant to this project include:
+
+- applicant is the **primary or core maintainer** of an active public open-source repository;
+- GitHub profile and repository should be public;
+- the application asks why the repository qualifies, with examples such as GitHub stars, monthly downloads, or ecosystem importance;
+- OpenAI states that it reviews signals including meaningful usage, broad adoption, clear ecosystem importance, and evidence of active maintenance;
+- the form includes optional interest in Codex Security and API credits;
+- API-credit applicants provide an OpenAI Organization ID and a short explanation of how credits will support the project;
+- applications are reviewed on a rolling basis;
+- projects that do not neatly fit usage/adoption criteria may still explain why they matter to the ecosystem.
+
+Current form: [Codex for Open Source](https://openai.com/form/codex-for-oss/).
+
 ## Draft application positioning
 
 A concise, truthful positioning statement:
 
-> `schematic-mcp` is an open-source MCP server that gives AI coding agents deterministic access to hardware schematic connectivity. Instead of asking a model to infer nets and pin mappings from an image, it parses EDA source files into a canonical graph and exposes queryable components, pins, nets, signal traces, and MCU pin maps. The project starts with KiCad and aims to become a vendor-neutral hardware context layer for firmware and electronics workflows.
+> `schematic-mcp` is an open-source hardware-context MCP server for AI coding agents. It deterministically parses EDA source files into a canonical electrical graph and exposes queryable components, pins, nets, signal traces, and firmware ↔ schematic pin validation. The project starts with KiCad but is intentionally designed around vendor-neutral adapters so embedded coding agents can verify hardware assumptions instead of reasoning from source code or screenshots alone.
 
 ## Why the problem matters
 
-Coding agents increasingly modify embedded firmware while critical hardware context remains locked inside EDA files. A wrong GPIO, I2C address assumption, power-domain assumption, or signal mapping can create failures that source-code-only reasoning cannot detect. A structured schematic context layer makes those constraints available to agents through deterministic tools.
+Coding agents increasingly modify embedded firmware while critical hardware context remains locked inside EDA files. A wrong GPIO, I2C assumption, power-domain assumption, or signal mapping can create failures that source-code-only reasoning cannot detect. A structured schematic context layer makes those constraints available to agents through deterministic tools.
+
+The public synthetic demo already demonstrates this class of failure: firmware swaps `SENSOR_INT` and `LED_STATUS` GPIO assignments while the schematic preserves the correct electrical mapping, and `validate_pinmap()` reports both mismatches explicitly.
+
+## Credible API-credit use
+
+If applying for API credits, describe work that genuinely benefits the public repository rather than adding an API dependency to core parsing.
+
+Good candidates include:
+
+- open-source evals measuring whether coding agents detect firmware/hardware mismatches with and without schematic context;
+- maintainer automation for issue triage and compatibility-fixture review;
+- automated release-note and regression-review workflows;
+- evaluation of framework-specific firmware extraction against the deterministic schematic ground truth.
+
+The core EDA parser and connectivity graph should remain deterministic and usable without an OpenAI API key.
 
 ## Application integrity rule
 
