@@ -83,7 +83,7 @@ def test_parses_components_pins_and_named_nets() -> None:
     assert schematic.net("OUTPUT").pins == ["U1.2"]
 
 
-def test_store_traces_pin_to_component_and_net(tmp_path: Path) -> None:
+def test_store_traces_pin_through_component_to_other_net(tmp_path: Path) -> None:
     path = tmp_path / "demo.kicad_sch"
     path.write_text(SAMPLE, encoding="utf-8")
 
@@ -92,8 +92,9 @@ def test_store_traces_pin_to_component_and_net(tmp_path: Path) -> None:
     trace = store.trace_signal(item_id, "U1.1", max_depth=2)
 
     assert trace["start"] == "U1.1"
-    assert {node["id"] for node in trace["nodes"]} == {"INPUT", "U1"}
+    assert {node["id"] for node in trace["nodes"]} == {"INPUT", "U1", "OUTPUT"}
     assert any(edge["pin"] == "1" and edge["net"] == "INPUT" for edge in trace["edges"])
+    assert any(edge["pin"] == "2" and edge["net"] == "OUTPUT" for edge in trace["edges"])
 
 
 def test_store_rejects_paths_outside_root(tmp_path: Path) -> None:
