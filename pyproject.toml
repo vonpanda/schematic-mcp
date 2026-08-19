@@ -15,6 +15,9 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
 ]
 dependencies = [
@@ -22,7 +25,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = [
+  "build>=1.2",
+  "pytest>=8",
+]
 
 [project.scripts]
 schematic-mcp = "schematic_mcp.server:main"
@@ -31,6 +37,8 @@ schematic-mcp = "schematic_mcp.server:main"
 Homepage = "https://github.com/vonpanda/schematic-mcp"
 Repository = "https://github.com/vonpanda/schematic-mcp"
 Issues = "https://github.com/vonpanda/schematic-mcp/issues"
+Changelog = "https://github.com/vonpanda/schematic-mcp/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/vonpanda/schematic-mcp/tree/main/docs"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,0 +1,52 @@
+name: Feature request
+description: Propose a new EDA adapter, MCP capability, or hardware-context workflow
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What hardware or AI-agent workflow is currently difficult or impossible?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed capability
+      description: Describe the desired behavior rather than only an implementation detail.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - KiCad parsing
+        - PDF/vector schematic adapter
+        - Altium adapter
+        - EasyEDA adapter
+        - Connectivity / graph model
+        - MCP tool or resource
+        - Firmware ↔ schematic validation
+        - BOM / PCB / Gerber context
+        - Documentation / examples
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example agent question or workflow
+      placeholder: "Example: Which MCU pins conflict with the pin definitions in firmware?"
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility notes
+      description: EDA versions, file variants, edge cases, or backward-compatibility concerns.
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I may be able to help implement or test this feature.
