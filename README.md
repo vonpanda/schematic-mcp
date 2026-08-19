@@ -22,6 +22,14 @@ The server parses the EDA file deterministically, builds a canonical component/p
 
 The design principle is conservative: when connectivity cannot be resolved confidently, surface a warning instead of inventing an electrical connection.
 
+### Design focus
+
+`schematic-mcp` is intentionally a **file-driven hardware context layer**, not a general-purpose EDA GUI automation server. Normal KiCad read/query workflows do not require a running KiCad application. EDA-specific adapters produce a canonical electrical graph, while the agent-facing MCP contract remains format-neutral.
+
+That makes the project complementary to editor/IPC automation: editor tools are valuable for interactive design changes, while `schematic-mcp` focuses on deterministic hardware facts that coding agents, CI systems, and future cross-EDA adapters can consume. Firmware ↔ schematic verification is a first concrete use case.
+
+See [`docs/project-positioning.md`](docs/project-positioning.md) for the project boundaries and ecosystem thesis.
+
 ## V0.1 features
 
 - Parse modern KiCad `.kicad_sch` S-expression files
@@ -220,6 +228,7 @@ Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). Coding agents and maintainers s
 Useful maintainer/project docs:
 
 - [`AGENTS.md`](AGENTS.md) — coding-agent and maintainer rules
+- [`docs/project-positioning.md`](docs/project-positioning.md) — project boundaries and ecosystem value
 - [`docs/architecture.md`](docs/architecture.md) — parser/model/MCP architecture
 - [`docs/firmware-validation-demo.md`](docs/firmware-validation-demo.md) — firmware ↔ schematic mismatch demo
 - [`examples/README.md`](examples/README.md) — runnable synthetic fixtures
