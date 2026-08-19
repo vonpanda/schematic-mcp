@@ -1,9 +1,11 @@
 """MCP server exposing hardware schematic context to AI agents."""
 from __future__ import annotations
 
+import argparse
 import json
 from dataclasses import asdict
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal
 
 from mcp.server import MCPServer
 
@@ -140,7 +142,35 @@ def current_model_resource() -> str:
 
 
 def main() -> None:
-    mcp.run()
+    parser = argparse.ArgumentParser(description="Expose hardware schematics through MCP")
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "streamable-http"),
+        default="stdio",
+        help="MCP transport (default: stdio)",
+    )
+    parser.add_argument("--host", default="127.0.0.1", help="HTTP bind host")
+    parser.add_argument("--port", type=int, default=8000, help="HTTP bind port")
+    parser.add_argument(
+        "--root",
+        help="Optional filesystem root that open_schematic is allowed to read",
+    )
+    args = parser.parse_args()
+
+    if args.root:
+        workspace.root = Path(args.root).expanduser().resolve()
+
+    transport: Literal["stdio", "streamable-http"] = args.transport
+    if transport == "stdio":
+        mcp.run()
+    else:
+        mcp.run(
+            transport="streamable-http",
+            host=args.host,
+            port=args.port,
+            stateless_http=True,
+            json_response=True,
+        )
 
 
 if __name__ == "__main__":

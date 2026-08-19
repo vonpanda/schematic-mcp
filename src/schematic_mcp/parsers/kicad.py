@@ -2,15 +2,17 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from schematic_mcp.models import Component, Net, Pin, Schematic, SheetRef
 from schematic_mcp.parsers.base import SchematicParser
-from schematic_mcp.sexpr import SExpr, child, children, loads, scalar, tag, walk
+from schematic_mcp.sexpr import SExpr, child, children, loads, scalar, tag
 
 Point = tuple[float, float]
 _EPS = 1e-4
+_UNIT_SUFFIX = re.compile(r"_(\d+)_(\d+)$")
 
 
 def _float(value: str | None, default: float = 0.0) -> float:
@@ -50,6 +52,13 @@ def _point_on_segment(point: Point, a: Point, b: Point, eps: float = _EPS) -> bo
     return min(ax, bx) - eps <= px <= max(ax, bx) + eps and min(ay, by) - eps <= py <= max(ay, by) + eps
 
 
+def _infer_unit(symbol_name: str | None, inherited: int = 0) -> int:
+    if not symbol_name:
+        return inherited
+    match = _UNIT_SUFFIX.search(symbol_name)
+    return int(match.group(1)) if match else inherited
+
+
 class _DisjointSet:
     def __init__(self) -> None:
         self.parent: dict[Point, Point] = {}
@@ -78,6 +87,7 @@ class _LibPin:
     name: str
     electrical_type: str
     position: Point
+    unit: int = 0
 
 
 class KiCadSchematicParser(SchematicParser):
@@ -93,6 +103,22 @@ class KiCadSchematicParser(SchematicParser):
         nets, warnings = self._connectivity(root, components)
         return Schematic(path=str(source.resolve()), format="kicad_sch", version=scalar(child(root, "version")), generator=scalar(child(root, "generator")), components=components, nets=nets, sheets=self._parse_sheets(root), warnings=warnings)
 
+    def _collect_symbol_pins(self, symbol: SExpr, inherited_unit: int = 0) -> list[_LibPin]:
+        if not isinstance(symbol, list):
+            return []
+        current_unit = _infer_unit(scalar(symbol), inherited_unit)
+        pins: list[_LibPin] = []
+        for node in children(symbol, "pin"):
+            number = scalar(child(node, "number")) or ""
+            if not number:
+                continue
+            name = scalar(child(node, "name")) or ""
+            pos, _ = _point_from_at(child(node, "at"))
+            pins.append(_LibPin(number, name, scalar(node) or "", pos, current_unit))
+        for child_symbol in children(symbol, "symbol"):
+            pins.extend(self._collect_symbol_pins(child_symbol, current_unit))
+        return pins
+
     def _parse_library_pins(self, root: SExpr) -> dict[str, list[_LibPin]]:
         result: dict[str, list[_LibPin]] = {}
         libs = child(root, "lib_symbols")
@@ -100,19 +126,17 @@ class KiCadSchematicParser(SchematicParser):
             return result
         for symbol in children(libs, "symbol"):
             lib_id = scalar(symbol) or ""
-            pins: list[_LibPin] = []
-            seen: set[tuple[str, Point]] = set()
-            for node in walk(symbol):
-                if tag(node) != "pin":
-                    continue
-                number = scalar(child(node, "number")) or ""
-                name = scalar(child(node, "name")) or ""
-                pos, _ = _point_from_at(child(node, "at"))
-                identity = (number, _key(pos))
-                if number and identity not in seen:
-                    pins.append(_LibPin(number, name, scalar(node) or "", pos))
+            if not lib_id:
+                continue
+            pins = self._collect_symbol_pins(symbol)
+            seen: set[tuple[str, Point, int]] = set()
+            deduped: list[_LibPin] = []
+            for pin in pins:
+                identity = (pin.number, _key(pin.position), pin.unit)
+                if identity not in seen:
+                    deduped.append(pin)
                     seen.add(identity)
-            result[lib_id] = pins
+            result[lib_id] = deduped
         return result
 
     def _parse_components(self, root: SExpr, lib_pins: dict[str, list[_LibPin]]) -> list[Component]:
@@ -122,6 +146,7 @@ class KiCadSchematicParser(SchematicParser):
             if not lib_id:
                 continue
             position, rotation = _point_from_at(child(symbol, "at"))
+            unit = _int(scalar(child(symbol, "unit")), 1)
             properties: dict[str, str] = {}
             for prop in children(symbol, "property"):
                 name, value = scalar(prop, 1), scalar(prop, 2)
@@ -129,8 +154,32 @@ class KiCadSchematicParser(SchematicParser):
                     properties[name] = value
             mirror_node = child(symbol, "mirror")
             mirror_axis = scalar(mirror_node) if mirror_node else None
-            pins = [Pin(number=p.number, name=p.name, electrical_type=p.electrical_type, position=self._transform(p.position, position, rotation, mirror_axis)) for p in lib_pins.get(lib_id, [])]
-            components.append(Component(reference=properties.get("Reference", "?"), value=properties.get("Value", lib_id.split(":")[-1]), lib_id=lib_id, unit=_int(scalar(child(symbol, "unit")), 1), position=position, rotation=rotation, properties=properties, pins=pins))
+
+            instance_pin_numbers = {
+                number
+                for pin_node in children(symbol, "pin")
+                if (number := scalar(pin_node)) is not None
+            }
+            selected: dict[str, _LibPin] = {}
+            for pin in lib_pins.get(lib_id, []):
+                if pin.unit == 0:
+                    selected.setdefault(pin.number, pin)
+            for pin in lib_pins.get(lib_id, []):
+                if pin.unit == unit:
+                    selected[pin.number] = pin
+            if instance_pin_numbers:
+                selected = {number: pin for number, pin in selected.items() if number in instance_pin_numbers}
+
+            pins = [
+                Pin(
+                    number=pin.number,
+                    name=pin.name,
+                    electrical_type=pin.electrical_type,
+                    position=self._transform(pin.position, position, rotation, mirror_axis),
+                )
+                for pin in selected.values()
+            ]
+            components.append(Component(reference=properties.get("Reference", "?"), value=properties.get("Value", lib_id.split(":")[-1]), lib_id=lib_id, unit=unit, position=position, rotation=rotation, properties=properties, pins=pins))
         return components
 
     @staticmethod
