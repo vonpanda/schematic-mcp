@@ -1,0 +1,29 @@
+(kicad_sch
+  (version 20231120)
+  (generator eeschema)
+  (lib_symbols
+    (symbol "MCU:ESP32Demo"
+      (symbol "ESP32Demo_1_1"
+        (pin bidirectional line (at 0 0 0) (length 2.54) (name "GPIO8") (number "1"))
+        (pin bidirectional line (at 0 5 0) (length 2.54) (name "GPIO9") (number "2"))
+        (pin input line (at 0 10 0) (length 2.54) (name "GPIO12") (number "3"))
+        (pin output line (at 0 15 0) (length 2.54) (name "GPIO13") (number "4"))))
+    (symbol "Sensor:DemoI2CSensor"
+      (symbol "DemoI2CSensor_1_1"
+        (pin bidirectional line (at 0 0 180) (length 2.54) (name "SDA") (number "1"))
+        (pin input line (at 0 5 180) (length 2.54) (name "SCL") (number "2"))
+        (pin output line (at 0 10 180) (length 2.54) (name "INT") (number "3"))))
+    (symbol "Device:DemoLED"
+      (symbol "DemoLED_1_1"
+        (pin input line (at 0 0 180) (length 2.54) (name "IN") (number "1")))))
+  (wire (pts (xy 10 10) (xy 30 10)))
+  (wire (pts (xy 10 15) (xy 30 15)))
+  (wire (pts (xy 10 20) (xy 30 20)))
+  (wire (pts (xy 10 25) (xy 30 25)))
+  (label "I2C_SDA" (at 20 10 0))
+  (label "I2C_SCL" (at 20 15 0))
+  (label "SENSOR_INT" (at 20 20 0))
+  (label "LED_STATUS" (at 20 25 0))
+  (symbol (lib_id "MCU:ESP32Demo") (at 10 10 0) (unit 1) (property "Reference" "U1") (property "Value" "ESP32-Demo"))
+  (symbol (lib_id "Sensor:DemoI2CSensor") (at 30 10 0) (unit 1) (property "Reference" "U2") (property "Value" "I2C-Sensor"))
+  (symbol (lib_id "Device:DemoLED") (at 30 25 0) (unit 1) (property "Reference" "D1") (property "Value" "Status-LED")))
