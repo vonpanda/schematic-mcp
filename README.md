@@ -16,6 +16,7 @@ An AI coding agent writing firmware often needs answers such as:
 - What is connected to `U4.GPIO12`?
 - Which devices share this I2C net?
 - What are all pins and resolved nets on the MCU?
+- Does the GPIO map assumed by firmware actually match the schematic?
 
 The server parses the EDA file deterministically, builds a canonical component/pin/net model, and exposes that model through MCP tools and resources.
 
@@ -32,6 +33,7 @@ The design principle is conservative: when connectivity cannot be resolved confi
 - Inspect one component or pin
 - Trace a pin to all endpoints on the same electrical net
 - Generate compact MCU pin maps
+- Compare firmware pin expectations with schematic nets by physical pin number or symbolic pin name
 - Expose the current canonical model as MCP resources
 - Restrict filesystem access with `SCHEMATIC_MCP_ROOT` or `--root`
 - Run locally over stdio or Streamable HTTP
@@ -50,6 +52,7 @@ The design principle is conservative: when connectivity cannot be resolved confi
 | `get_net(name)` | Return labels and endpoints on a net |
 | `trace_signal(reference, pin_number)` | Trace one pin across its electrical net |
 | `get_mcu_pinmap(reference)` | Return a compact pin-to-net map |
+| `validate_pinmap(reference, expected)` | Compare firmware pin expectations with resolved schematic nets |
 
 Resources:
 
@@ -110,6 +113,35 @@ trace_signal("U1", "1")
 
 The example should resolve `U1.1` onto `SENSOR_OUT` and show `U2.1` as another endpoint. See [`examples/README.md`](examples/README.md).
 
+### Firmware ↔ schematic validation demo
+
+A second synthetic example demonstrates a hardware bug that a coding agent cannot safely detect from source code alone. The firmware intentionally swaps `SENSOR_INT` and `LED_STATUS` GPIO assignments while the schematic preserves the correct electrical mapping.
+
+Run the deterministic local demo:
+
+```bash
+python examples/demo_firmware_validation.py
+```
+
+It extracts the simple GPIO contract from `examples/firmware_with_pin_bug.c`, parses `examples/esp32_firmware_validation.kicad_sch`, and reports **two matches and two mismatches**.
+
+Through MCP, the same comparison is:
+
+```text
+open_schematic("esp32_firmware_validation.kicad_sch")
+validate_pinmap(
+  "U1",
+  {
+    "GPIO8": "I2C_SDA",
+    "GPIO9": "I2C_SCL",
+    "GPIO12": "LED_STATUS",
+    "GPIO13": "SENSOR_INT"
+  }
+)
+```
+
+See [`docs/firmware-validation-demo.md`](docs/firmware-validation-demo.md) for the full agent workflow and expected result.
+
 ### Streamable HTTP
 
 ```bash
@@ -157,7 +189,7 @@ See [`SECURITY.md`](SECURITY.md) for vulnerability reporting and deployment guid
 
 V0.1 is intentionally small. Hierarchical child sheets are discovered but not recursively merged into one cross-sheet graph yet. Unusual multi-unit/library constructs and third-party KiCad exports still need broader compatibility fixtures. Bus semantics are not reconstructed yet. PDF, Altium and EasyEDA are not implemented yet.
 
-`trace_signal` follows only resolved net connectivity; it does not assume that separate pins inside an IC are electrically connected.
+`trace_signal` follows only resolved net connectivity; it does not assume that separate pins inside an IC are electrically connected. `validate_pinmap` compares an explicit expected mapping; automatic extraction from arbitrary firmware frameworks is not part of the core parser yet.
 
 ## Roadmap
 
@@ -165,7 +197,7 @@ V0.1 is intentionally small. Hierarchical child sheets are discovered but not re
 - **V0.3** — PDF/vector schematic adapter with confidence metadata
 - **V0.4** — Altium and EasyEDA adapters
 - **V0.5** — datasheet context and electrical-rule reasoning
-- **V0.6** — firmware ↔ schematic pin-map validation
+- **V0.6** — framework-specific firmware extraction (ESP-IDF/Arduino/Zephyr) and CI pin-contract checks
 - **Later** — PCB, BOM, Gerber and manufacturing context
 
 The long-term goal is a vendor-neutral **hardware context server for AI agents**.
@@ -179,7 +211,8 @@ Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). Please never contribute proprie
 Useful maintainer/project docs:
 
 - [`docs/architecture.md`](docs/architecture.md) — parser/model/MCP architecture
-- [`examples/README.md`](examples/README.md) — runnable synthetic fixture
+- [`docs/firmware-validation-demo.md`](docs/firmware-validation-demo.md) — firmware ↔ schematic mismatch demo
+- [`examples/README.md`](examples/README.md) — runnable synthetic fixtures
 - [`CHANGELOG.md`](CHANGELOG.md) — release history
 - [`SECURITY.md`](SECURITY.md) — security policy
 - [`docs/oss-readiness.md`](docs/oss-readiness.md) — public-adoption and OSS-program readiness checklist
