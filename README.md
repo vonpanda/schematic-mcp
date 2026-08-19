@@ -22,13 +22,15 @@ The server parses the EDA file deterministically, builds a canonical component/p
 - Parse modern KiCad `.kicad_sch` S-expression files
 - Read components, references, values and library IDs
 - Resolve library pin geometry into schematic coordinates
+- Select pins by the active KiCad unit for multi-unit symbols
 - Build connectivity from wires, labels and junctions
 - Resolve named and anonymous nets
 - Inspect one component or pin
 - Trace a pin to all endpoints on the same electrical net
 - Generate compact MCU pin maps
 - Expose the current canonical model as MCP resources
-- Restrict filesystem access with `SCHEMATIC_MCP_ROOT`
+- Restrict filesystem access with `SCHEMATIC_MCP_ROOT` or `--root`
+- Run locally over stdio or Streamable HTTP
 
 ## MCP tools
 
@@ -65,6 +67,8 @@ The project uses the current stable v2 line of the official MCP Python SDK.
 
 ## Run
 
+### Local stdio
+
 ```bash
 schematic-mcp
 ```
@@ -74,6 +78,20 @@ or:
 ```bash
 python -m schematic_mcp
 ```
+
+You can restrict readable files without setting an environment variable:
+
+```bash
+schematic-mcp --root /absolute/path/to/your/hardware-projects
+```
+
+### Streamable HTTP
+
+```bash
+schematic-mcp --transport streamable-http --host 127.0.0.1 --port 8000
+```
+
+The MCP endpoint is available at `http://127.0.0.1:8000/mcp`. The default host is loopback-only; do not expose an unauthenticated development server directly to the public internet.
 
 For the MCP Inspector:
 
@@ -106,13 +124,13 @@ trace_signal("U4", "12")
 
 ## Filesystem security
 
-By default, a local stdio server can open paths accessible to its process. For agents you do not fully trust, set `SCHEMATIC_MCP_ROOT` to an allowed project directory. Attempts to open files outside it are rejected.
+By default, a local server can open paths accessible to its process. For agents you do not fully trust, set `SCHEMATIC_MCP_ROOT` or pass `--root` to an allowed project directory. Attempts to open files outside it are rejected.
 
 ## Current limitations
 
-V0.1 is intentionally small. Hierarchical child sheets are discovered but not recursively merged into one cross-sheet graph yet. Complex multi-unit symbols and unusual KiCad constructs may require compatibility work. PDF, Altium and EasyEDA are not implemented yet.
+V0.1 is intentionally small. Hierarchical child sheets are discovered but not recursively merged into one cross-sheet graph yet. Unusual multi-unit/library constructs and third-party KiCad exports still need broader compatibility fixtures. Bus semantics are not reconstructed yet. PDF, Altium and EasyEDA are not implemented yet.
 
-When connectivity cannot be resolved confidently, the project should surface a warning rather than invent an electrical connection.
+When connectivity cannot be resolved confidently, the project should surface a warning rather than invent an electrical connection. `trace_signal` follows only resolved net connectivity; it does not assume that separate pins inside an IC are electrically connected.
 
 ## Roadmap
 
