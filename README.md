@@ -59,9 +59,18 @@ Resources:
 - `schematic://current/summary`
 - `schematic://current/model`
 
-## Install for development
+## Install from GitHub
 
-Python 3.10+ is required.
+Python 3.10+ is required. Until the first package-registry release is published, the current `main` branch can be installed directly from GitHub:
+
+```bash
+python -m pip install "git+https://github.com/vonpanda/schematic-mcp.git"
+schematic-mcp --help
+```
+
+For reproducible production use, pin a release tag or commit rather than tracking an unpinned development branch. The first packaged release is tracked in [issue #8](https://github.com/vonpanda/schematic-mcp/issues/8).
+
+## Install for development
 
 ```bash
 git clone https://github.com/vonpanda/schematic-mcp.git
@@ -206,10 +215,11 @@ The long-term goal is a vendor-neutral **hardware context server for AI agents**
 
 Hardware engineers, embedded developers and EDA users can help most by contributing minimal compatibility fixtures, parser edge cases, tests, and real agent workflows.
 
-Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). Please never contribute proprietary customer schematics unless you have explicit permission to publish them.
+Start with [`CONTRIBUTING.md`](CONTRIBUTING.md). Coding agents and maintainers should also read [`AGENTS.md`](AGENTS.md) for architecture invariants, safety constraints, and the expected development loop. Please never contribute proprietary customer schematics unless you have explicit permission to publish them.
 
 Useful maintainer/project docs:
 
+- [`AGENTS.md`](AGENTS.md) — coding-agent and maintainer rules
 - [`docs/architecture.md`](docs/architecture.md) — parser/model/MCP architecture
 - [`docs/firmware-validation-demo.md`](docs/firmware-validation-demo.md) — firmware ↔ schematic mismatch demo
 - [`examples/README.md`](examples/README.md) — runnable synthetic fixtures
