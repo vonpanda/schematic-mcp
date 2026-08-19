@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a reproducible parser, graph, MCP, or security-boundary problem
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve schematic-mcp. Please use a minimal schematic that you are allowed to share. Do not upload proprietary customer designs.
+  - type: input
+    id: version
+    attributes:
+      label: schematic-mcp version
+      placeholder: "0.1.0 or commit SHA"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - KiCad parser
+        - Connectivity / circuit graph
+        - MCP server / tools
+        - Filesystem boundary / security
+        - Packaging / installation
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, Python version, KiCad/exporter version"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include exact steps and, when possible, a small synthetic schematic fixture.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      render: shell
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Sharing check
+      options:
+        - label: I confirm that any attached schematic or log is safe for public sharing and contains no customer-confidential information or secrets.
+          required: true
