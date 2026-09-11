@@ -8,18 +8,41 @@ from pathlib import Path
 from typing import Any, Literal
 
 from mcp.server import MCPServer
+from mcp.types import ToolAnnotations
 
 from schematic_mcp.workspace import Workspace
 
 workspace = Workspace()
-mcp = MCPServer("SYANKOR Schematic MCP", version="0.1.0", instructions="Open a KiCad schematic, then use component/net/pin tools to inspect its electrical connectivity. Signal tracing is net-based and never invents internal connectivity through ICs.")
+mcp = MCPServer(
+    "SYANKOR Schematic MCP",
+    version="0.1.0",
+    instructions=(
+        "Open a KiCad schematic, then use component/net/pin tools to inspect its "
+        "electrical connectivity. Signal tracing is net-based and never invents "
+        "internal connectivity through ICs."
+    ),
+)
+
+_READ_ONLY = ToolAnnotations(
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=False,
+)
+
+_OPEN_SCHEMATIC = ToolAnnotations(
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=False,
+)
 
 
 def _error(exc: Exception) -> dict[str, Any]:
     return {"ok": False, "error": type(exc).__name__, "message": str(exc)}
 
 
-@mcp.tool()
+@mcp.tool(annotations=_OPEN_SCHEMATIC)
 def open_schematic(path: str) -> dict[str, Any]:
     """Open a local KiCad .kicad_sch file and build its canonical circuit graph."""
     try:
@@ -28,7 +51,7 @@ def open_schematic(path: str) -> dict[str, Any]:
         return _error(exc)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 def schematic_summary() -> dict[str, Any]:
     """Return summary information for the currently loaded schematic."""
     try:
@@ -38,19 +61,29 @@ def schematic_summary() -> dict[str, Any]:
         return _error(exc)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 def list_components(query: str = "") -> dict[str, Any]:
     """List schematic components, optionally filtering by reference, value, or library id."""
     try:
         schematic, _ = workspace.require()
         needle = query.lower().strip()
-        items = [{"reference": c.reference, "value": c.value, "lib_id": c.lib_id, "unit": c.unit, "pin_count": len(c.pins)} for c in schematic.components if not needle or needle in f"{c.reference} {c.value} {c.lib_id}".lower()]
+        items = [
+            {
+                "reference": c.reference,
+                "value": c.value,
+                "lib_id": c.lib_id,
+                "unit": c.unit,
+                "pin_count": len(c.pins),
+            }
+            for c in schematic.components
+            if not needle or needle in f"{c.reference} {c.value} {c.lib_id}".lower()
+        ]
         return {"ok": True, "count": len(items), "components": items}
     except Exception as exc:
         return _error(exc)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 def get_component(reference: str) -> dict[str, Any]:
     """Get one component including properties, pins, and resolved net names."""
     try:
@@ -63,7 +96,7 @@ def get_component(reference: str) -> dict[str, Any]:
         return _error(exc)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 def get_pin(reference: str, pin_number: str) -> dict[str, Any]:
     """Get one component pin and its resolved electrical net."""
     try:
@@ -76,19 +109,23 @@ def get_pin(reference: str, pin_number: str) -> dict[str, Any]:
         return _error(exc)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 def list_nets(query: str = "") -> dict[str, Any]:
     """List resolved nets, optionally filtering by net name or connected pin."""
     try:
         schematic, _ = workspace.require()
         needle = query.lower().strip()
-        items = [asdict(n) for n in schematic.nets if not needle or needle in f"{n.name} {' '.join(n.labels)} {' '.join(n.pins)}".lower()]
+        items = [
+            asdict(n)
+            for n in schematic.nets
+            if not needle or needle in f"{n.name} {' '.join(n.labels)} {' '.join(n.pins)}".lower()
+        ]
         return {"ok": True, "count": len(items), "nets": items}
     except Exception as exc:
         return _error(exc)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 def get_net(name: str) -> dict[str, Any]:
     """Get a net by exact name, including labels and all connected component pins."""
     try:
@@ -101,7 +138,7 @@ def get_net(name: str) -> dict[str, Any]:
         return _error(exc)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 def trace_signal(reference: str, pin_number: str) -> dict[str, Any]:
     """Trace one pin to every other pin on the same resolved electrical net."""
     try:
@@ -111,7 +148,7 @@ def trace_signal(reference: str, pin_number: str) -> dict[str, Any]:
         return _error(exc)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 def get_mcu_pinmap(reference: str) -> dict[str, Any]:
     """Return a compact pin-to-net map for an MCU or any multi-pin component."""
     try:
@@ -121,7 +158,7 @@ def get_mcu_pinmap(reference: str) -> dict[str, Any]:
         return _error(exc)
 
 
-@mcp.tool()
+@mcp.tool(annotations=_READ_ONLY)
 def validate_pinmap(reference: str, expected: dict[str, str]) -> dict[str, Any]:
     """Compare firmware pin expectations with schematic nets.
 
