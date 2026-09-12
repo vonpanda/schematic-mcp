@@ -1,0 +1,261 @@
+{
+  "$defs": {
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "x0": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X0",
+          "type": "number"
+        },
+        "y0": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y0",
+          "type": "number"
+        },
+        "x1": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X1",
+          "type": "number"
+        },
+        "y1": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y1",
+          "type": "number"
+        },
+        "observation": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Observation",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x0",
+        "y0",
+        "x1",
+        "y1",
+        "observation",
+        "confidence"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "ExtractedComponent": {
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[^./\\s]+$",
+          "title": "Reference",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 2000,
+          "title": "Value",
+          "type": "string"
+        },
+        "lib_id": {
+          "maxLength": 2000,
+          "title": "Lib Id",
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        },
+        "pins": {
+          "items": {
+            "$ref": "#/$defs/ExtractedPin"
+          },
+          "maxItems": 1000,
+          "title": "Pins",
+          "type": "array"
+        }
+      },
+      "required": [
+        "reference",
+        "value",
+        "lib_id",
+        "evidence",
+        "pins"
+      ],
+      "title": "ExtractedComponent",
+      "type": "object"
+    },
+    "ExtractedNet": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[^./\\s]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "local",
+            "global",
+            "unknown"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "labels": {
+          "items": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Labels",
+          "type": "array"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "scope",
+        "labels",
+        "evidence"
+      ],
+      "title": "ExtractedNet",
+      "type": "object"
+    },
+    "ExtractedPin": {
+      "additionalProperties": false,
+      "properties": {
+        "number": {
+          "maxLength": 160,
+          "minLength": 1,
+          "pattern": "^[^./\\s]+$",
+          "title": "Number",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 2000,
+          "title": "Name",
+          "type": "string"
+        },
+        "electrical_type": {
+          "enum": [
+            "input",
+            "output",
+            "bidirectional",
+            "tri_state",
+            "passive",
+            "power_in",
+            "power_out",
+            "open_collector",
+            "open_emitter",
+            "no_connect",
+            "unspecified"
+          ],
+          "title": "Electrical Type",
+          "type": "string"
+        },
+        "net_id": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "minLength": 1,
+              "pattern": "^[^./\\s]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Net Id"
+        },
+        "no_connect": {
+          "title": "No Connect",
+          "type": "boolean"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        }
+      },
+      "required": [
+        "number",
+        "name",
+        "electrical_type",
+        "net_id",
+        "no_connect",
+        "evidence"
+      ],
+      "title": "ExtractedPin",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "coverage": {
+      "enum": [
+        "complete",
+        "partial",
+        "unreadable"
+      ],
+      "title": "Coverage",
+      "type": "string"
+    },
+    "components": {
+      "items": {
+        "$ref": "#/$defs/ExtractedComponent"
+      },
+      "maxItems": 2000,
+      "title": "Components",
+      "type": "array"
+    },
+    "nets": {
+      "items": {
+        "$ref": "#/$defs/ExtractedNet"
+      },
+      "maxItems": 4000,
+      "title": "Nets",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "maxLength": 2000,
+        "type": "string"
+      },
+      "maxItems": 200,
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "coverage",
+    "components",
+    "nets",
+    "warnings"
+  ],
+  "title": "PageExtraction",
+  "type": "object"
+}

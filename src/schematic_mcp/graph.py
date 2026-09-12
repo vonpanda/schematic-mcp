@@ -51,16 +51,16 @@ class CircuitGraph:
         if pin is None:
             raise KeyError(f"pin not found: {reference}.{pin_number}")
         if not pin.net:
-            return {"source": f"{reference}.{pin_number}", "net": None, "endpoints": [], "note": "pin is not connected to a resolved net"}
+            return {"connectivity_status": self.schematic.connectivity_status, "source": f"{reference}.{pin_number}", "net": None, "endpoints": [], "note": "pin is not connected to a resolved net"}
         net = self.net(pin.net)
         source = f"{reference}.{pin_number}".upper()
-        return {"source": f"{reference}.{pin_number}", "net": pin.net, "labels": [] if net is None else net.labels, "endpoints": [] if net is None else [p for p in net.pins if p.upper() != source]}
+        return {"connectivity_status": self.schematic.connectivity_status, "source": f"{reference}.{pin_number}", "net": pin.net, "labels": [] if net is None else net.labels, "endpoints": [] if net is None else [p for p in net.pins if p.upper() != source]}
 
     def mcu_pinmap(self, reference: str) -> dict[str, Any]:
         component = self.component(reference)
         if component is None:
             raise KeyError(f"component not found: {reference}")
-        return {"reference": component.reference, "value": component.value, "lib_id": component.lib_id, "pins": [{"number": pin.number, "name": pin.name, "electrical_type": pin.electrical_type, "net": pin.net} for pin in component.pins]}
+        return {"connectivity_status": self.schematic.connectivity_status, "reference": component.reference, "value": component.value, "lib_id": component.lib_id, "pins": [{"number": pin.number, "name": pin.name, "electrical_type": pin.electrical_type, "net": pin.net} for pin in component.pins]}
 
     def validate_pinmap(self, reference: str, expected: dict[str, str]) -> dict[str, Any]:
         """Compare firmware pin expectations with the schematic's resolved electrical nets.
@@ -74,7 +74,7 @@ class CircuitGraph:
             raise KeyError(f"component not found: {reference}")
 
         checks: list[dict[str, Any]] = []
-        counts = {"match": 0, "mismatch": 0, "missing": 0, "unconnected": 0, "ambiguous": 0}
+        counts = {"match": 0, "mismatch": 0, "missing": 0, "unconnected": 0, "ambiguous": 0, "unverified": 0}
 
         for identifier, expected_net in expected.items():
             identifier = str(identifier)
@@ -105,6 +105,14 @@ class CircuitGraph:
                 )
                 continue
 
+            if self.schematic.connectivity_status == "unverified":
+                counts["unverified"] += 1
+                checks.append({"identifier": identifier, "pin_number": pin.number,
+                               "pin_name": pin.name, "expected_net": expected_net,
+                               "candidate_net": pin.net, "status": "unverified",
+                               "message": "Imported or vision-derived pin/net data requires source verification"})
+                continue
+
             if pin.net is None:
                 counts["unconnected"] += 1
                 checks.append(
@@ -132,9 +140,10 @@ class CircuitGraph:
                 }
             )
 
-        failed = counts["mismatch"] + counts["missing"] + counts["unconnected"] + counts["ambiguous"]
+        failed = counts["mismatch"] + counts["missing"] + counts["unconnected"] + counts["ambiguous"] + counts["unverified"]
         return {
-            "ok": failed == 0,
+            "ok": failed == 0 and self.schematic.connectivity_status != "unverified",
+            "connectivity_status": self.schematic.connectivity_status,
             "reference": component.reference,
             "value": component.value,
             "summary": {
@@ -145,6 +154,7 @@ class CircuitGraph:
                 "missing": counts["missing"],
                 "unconnected": counts["unconnected"],
                 "ambiguous": counts["ambiguous"],
+                "unverified": counts["unverified"],
             },
             "checks": checks,
         }
