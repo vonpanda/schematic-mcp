@@ -16,6 +16,7 @@ def main() -> None:
     parser.add_argument("path", help="KiCad schematic, or PDF/PNG/JPEG/WebP with --vision")
     parser.add_argument("--root", help="Restrict source reads to this directory")
     parser.add_argument("--vision", action="store_true", help="Explicitly send rendered input pages to configured LLM API")
+    parser.add_argument("--project", action="store_true", help="Use KiCad CLI to resolve the complete project hierarchy")
     parser.add_argument("--llm-review", action="store_true", help="Also send the structured model to the configured LLM API")
     parser.add_argument("--pages", type=int, nargs="+", help="One-based PDF page selection; other pages remain unreviewed")
     parser.add_argument("--output", type=Path, required=True, help="New directory for model.json, review.json, review.md")
@@ -23,6 +24,8 @@ def main() -> None:
     try:
         if args.pages and not args.vision:
             raise ValueError("--pages requires --vision")
+        if args.project and args.vision:
+            raise ValueError("--project and --vision are mutually exclusive")
         # Reserve a new directory before any billable request; never overwrite artifacts.
         args.output.mkdir(parents=True, exist_ok=False)
         workspace = Workspace()
@@ -32,6 +35,8 @@ def main() -> None:
             schematic = workspace.extract(args.path, args.pages)
         elif Path(args.path).suffix.lower() == ".json":
             schematic = workspace.open_model(args.path)
+        elif args.project:
+            schematic = workspace.open_project(args.path)
         else:
             schematic = workspace.open(args.path)
         (args.output / "model.json").write_text(json.dumps(schematic.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")

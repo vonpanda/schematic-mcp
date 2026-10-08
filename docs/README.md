@@ -2,11 +2,15 @@
 
 ## Start here
 
+- [reader-and-skills.md](reader-and-skills.md) — offline reader, full-project KiCad graph and repo-local review workflows.
+
 - [`project-positioning.md`](project-positioning.md) — what `schematic-mcp` is, what it is not, and why deterministic hardware context matters to coding agents.
 - [`architecture.md`](architecture.md) — parser → canonical model → graph → MCP architecture.
 - [`firmware-validation-demo.md`](firmware-validation-demo.md) — end-to-end firmware ↔ schematic mismatch scenario.
 
 ## Maintainer and open-source readiness
+
+- [first-release-plan.md](first-release-plan.md) — product contract, validation gates and initial open-source launch story.
 
 - [`oss-readiness.md`](oss-readiness.md) — truthful capability/adoption evidence, milestones, and current Codex for Open Source criteria.
 - [`openai-codex-for-oss-application-draft.md`](openai-codex-for-oss-application-draft.md) — maintainer working draft aligned to the current 500-character OpenAI form fields. Refresh all live metrics and account fields before submission.

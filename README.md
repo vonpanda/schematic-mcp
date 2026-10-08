@@ -46,6 +46,14 @@ The new directory contains `model.json`, `review.json` and `review.md`. Extracte
 
 See [configuration, complete workflow, data contract, limits and validation gate](docs/vision-and-review.md). This is engineering review assistance; zero findings does not establish a correct circuit, and synthetic tests do not establish real-model extraction accuracy.
 
+## Interactive schematic reader and review skills (development branch)
+
+The reader combines the original drawing, parsed component/net data and evidence-linked findings in one offline HTML file:
+
+    schematic-reader examples/minimal.kicad_sch --output ./minimal-review.html
+
+Native KiCad artwork is rendered with the official KiCad CLI. Single-sheet connectivity uses this project's offline parser; multi-sheet reader projects use KiCad's XML netlist export for the complete hierarchy. KiCad ERC appears separately from this project's findings. PDF/image input is supported through explicitly requested vision extraction. The repo-local Codex workflows in .agents/skills/ cover intake, signal tracing and engineering review. See [reader and skills](docs/reader-and-skills.md) for setup, privacy and coverage limits.
+
 ## V0.1 features
 
 - Parse modern KiCad `.kicad_sch` S-expression files
@@ -64,6 +72,8 @@ See [configuration, complete workflow, data contract, limits and validation gate
 - Automated parser, graph and filesystem-boundary tests in GitHub Actions
 
 ## MCP tools
+
+For a complete KiCad hierarchy, open_schematic_project(path) uses the locally installed KiCad CLI. The ordinary open_schematic(path) remains the offline root-sheet parser.
 
 | Tool | Purpose |
 | --- | --- |
@@ -224,13 +234,13 @@ See [`SECURITY.md`](SECURITY.md) for vulnerability reporting and deployment guid
 
 ## Current limitations
 
-V0.1 is intentionally small. Hierarchical child sheets are discovered but not recursively merged into one cross-sheet graph yet. Unusual multi-unit/library constructs and third-party KiCad exports still need broader compatibility fixtures. Bus semantics are not reconstructed yet. PDF, Altium and EasyEDA are not implemented yet.
+V0.1's offline parser is intentionally root-sheet-only. The development branch adds a full-project path through KiCad CLI's XML netlist, but unusual multi-unit/library constructs and third-party exports still need broader compatibility fixtures. Bus semantics are not reconstructed yet. PDF/image extraction on this branch is opt-in and unverified; Altium and EasyEDA native adapters are not implemented yet.
 
 `trace_signal` follows only resolved net connectivity; it does not assume that separate pins inside an IC are electrically connected. `validate_pinmap` compares an explicit expected mapping; automatic extraction from arbitrary firmware frameworks is not part of the core parser yet.
 
 ## Roadmap
 
-- **V0.2** — hierarchical KiCad project graph and richer bus/net semantics
+- **V0.2** — harden the KiCad project graph against repeated sheet instances and enrich bus/net semantics
 - **V0.3** — PDF/vector schematic adapter with confidence metadata
 - **V0.4** — Altium and EasyEDA adapters
 - **V0.5** — datasheet context and electrical-rule reasoning

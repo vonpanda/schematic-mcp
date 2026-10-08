@@ -48,7 +48,7 @@ def review_schematic(model: Schematic, llm: JSONClient | None = None) -> dict:
     ]
     if model.connectivity_status == "unverified":
         limitations.append("All imported/vision connectivity and pin types are unverified; findings are hypotheses until source inspection.")
-    if model.sheets:
+    if model.sheets and not model.provenance.get("hierarchy_complete"):
         limitations.append("Child sheets are not expanded; review does not cover the complete hierarchy.")
     if model.warnings:
         limitations.append("Parser/extraction warnings remain unresolved; see source_warnings.")
@@ -92,7 +92,9 @@ def review_schematic(model: Schematic, llm: JSONClient | None = None) -> dict:
             finding("OUTPUT_CONFLICT", "error", "Multiple push-pull outputs share a net", drivers,
                     f"Net {net.name} contains {len(drivers)} output-type pins.",
                     "Verify pin types and whether simultaneous drive can occur; check device datasheets.")
-        if len(power_drivers) > 1:
+        # Multiple supply pins inside one package may expose the same regulator
+        # (for example MCU VCAP pins). Distinct devices are the useful conflict.
+        if len({endpoints[e][0].reference for e in power_drivers}) > 1:
             finding("POWER_OUTPUT_CONFLICT", "error", "Multiple power outputs share a net", power_drivers,
                     f"Net {net.name} has multiple power-output pins.", "Verify parallel-operation support, isolation and power sequencing.")
         if ids and all(endpoints[e][1].electrical_type == "input" for e in ids):

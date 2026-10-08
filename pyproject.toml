@@ -39,6 +39,10 @@ dev = [
 [project.scripts]
 schematic-mcp = "schematic_mcp.server:main"
 schematic-review = "schematic_mcp.cli:main"
+schematic-reader = "schematic_mcp.reader:main"
+
+[tool.setuptools.package-data]
+schematic_mcp = ["reader.html"]
 
 [project.urls]
 Homepage = "https://github.com/vonpanda/schematic-mcp"
