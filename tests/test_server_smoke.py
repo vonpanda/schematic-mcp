@@ -3,3 +3,4 @@ def test_mcp_server_imports_with_registered_tools():
 
     assert server.mcp is not None
     assert callable(server.validate_pinmap)
+    assert callable(server.open_schematic_project)

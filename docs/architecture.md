@@ -37,6 +37,8 @@ MCP host / AI agent
 4. **Filesystem access is explicit.** `SCHEMATIC_MCP_ROOT` can constrain agent-visible files to one directory tree.
 5. **Warnings are data.** Ambiguous or partially supported structures are surfaced instead of silently guessed.
 
+The offline KiCad S-expression parser covers the root sheet. The optional KiCad CLI XML-netlist adapter supplies source-resolved cross-sheet connectivity for full projects; it uses the same canonical model and graph/MCP queries. The standalone reader uses KiCad's SVG export for artwork and shows KiCad ERC separately from this project's rules.
+
 ## V0.1 scope
 
 - Modern KiCad `.kicad_sch` files

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Schematic Reader</title>
+<style>
+:root{font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:#eaf0fa;background:#0c1421}
+*{box-sizing:border-box}body{margin:0;min-width:760px}button,input,select{font:inherit}button{cursor:pointer}
+header{height:64px;display:flex;align-items:center;gap:14px;padding:0 18px;background:#101d2f;border-bottom:1px solid #2b3b51}
+.brand{font-weight:750;letter-spacing:.02em;font-size:17px;white-space:nowrap}.brand span{color:#60dbb5}
+.badge{border:1px solid #486174;color:#cfe8e1;border-radius:20px;padding:3px 9px;font-size:12px;white-space:nowrap}
+.badge.warn{border-color:#8d6845;color:#ffd49c}.spacer{flex:1}
+.header-control{background:#16263b;color:#eef5ff;border:1px solid #40546d;border-radius:7px;padding:7px 9px}
+.layout{height:calc(100vh - 64px);display:grid;grid-template-columns:280px minmax(350px,1fr) 300px}
+aside{overflow:auto;background:#101d2f}.left{border-right:1px solid #2b3b51}.right{border-left:1px solid #2b3b51}
+.pane-title{padding:18px 16px 8px;font-size:12px;color:#91a9c4;text-transform:uppercase;letter-spacing:.12em}
+.search{margin:0 12px 12px;width:calc(100% - 24px);background:#0d1828;color:#fff;border:1px solid #435a73;border-radius:8px;padding:10px}
+.tabs{display:flex;padding:0 12px 12px;gap:4px}.tabs button{flex:1;border:0;background:transparent;color:#a4b8cf;padding:8px 2px;border-bottom:2px solid transparent}
+.tabs button.active{color:#78e4c2;border-bottom-color:#78e4c2}
+.item{width:100%;text-align:left;border:0;border-bottom:1px solid #22354a;background:transparent;color:#f2f6fc;padding:11px 16px}
+.item:hover,.item.active{background:#20374f}.item small{display:block;color:#9ab1ca;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.count{color:#81a1be;padding:8px 16px;font-size:12px}
+main{min-width:0;display:flex;flex-direction:column;background:#172437}
+.toolbar{height:48px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#18283d;border-bottom:1px solid #30445d;color:#b8cde2}
+.toolbar strong{color:#f0f7ff}.toolbar .spacer{flex:1}
+.tool{background:#263d55;color:#eaf4ff;border:1px solid #47617b;border-radius:6px;padding:4px 9px}
+.stage{overflow:auto;flex:1;padding:24px;display:flex;align-items:flex-start;justify-content:center;background-color:#152238;background-image:radial-gradient(#31465f 1px,transparent 1px);background-size:20px 20px}
+.sheet{position:relative;flex:none;box-shadow:0 12px 45px #0008;border:1px solid #607188;background:white}.sheet img{display:block;width:100%;height:auto}
+.marker{position:absolute;width:16px;height:16px;transform:translate(-50%,-50%);border:2px solid #0d2537;background:#54ecc3;border-radius:50%;box-shadow:0 0 0 5px #31d7af44;cursor:pointer;padding:0}
+.marker.finding{background:#ffad6a;box-shadow:0 0 0 5px #ff9e4255}.marker.box{width:auto;height:auto;transform:none;background:#ffad6a25;border:2px solid #fa8f52;border-radius:3px;box-shadow:none}
+.marker:hover,.marker:focus{outline:2px solid #fff;z-index:2}
+.right h2{font-size:18px;margin:4px 16px 10px;overflow-wrap:anywhere}.right p{margin:8px 16px;color:#b9cbe0}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#83a0bd;margin:18px 16px 4px}
+.detail{margin:0 16px;padding:9px 0;border-bottom:1px solid #273e55;overflow-wrap:anywhere}
+.detail b{color:#76e2c0}.note{margin:14px 16px;padding:11px;border:1px solid #826544;background:#4d372a;color:#ffddb1;border-radius:8px}
+.scope{border-top:1px solid #35506b;margin-top:20px;padding:8px 16px 24px;color:#c5d4e6}.scope summary{cursor:pointer;color:#ffcf92;font-weight:650}
+.scope li{margin:8px 0;overflow-wrap:anywhere}.scope ul{padding-left:19px}
+.empty{padding:18px;color:#9fb3c9}.footer{padding:8px 14px;background:#101d2f;border-top:1px solid #30445d;color:#9fb4cc;font-size:12px}
+@media(max-width:1050px){.layout{grid-template-columns:230px minmax(320px,1fr) 250px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">SCHEMATIC <span>READER</span></div>
+  <span id="trust" class="badge"></span>
+  <span id="review-status" class="badge warn">工程师待复核</span>
+  <div class="spacer"></div>
+  <span id="source-name"></span>
+</header>
+<div class="layout">
+  <aside class="left">
+    <div class="pane-title">查找与追踪</div>
+    <input id="search" class="search" type="search" placeholder="搜索器件、网络、问题 /" aria-label="搜索">
+    <div class="tabs">
+      <button data-tab="components" class="active">器件</button>
+      <button data-tab="nets">网络</button>
+      <button data-tab="findings">审查</button>
+      <button data-tab="erc">KiCad ERC</button>
+    </div>
+    <div id="count" class="count"></div>
+    <div id="list"></div>
+  </aside>
+  <main>
+    <div class="toolbar">
+      <strong id="page-label"></strong>
+      <select id="page-select" class="header-control" aria-label="图纸页"></select>
+      <div class="spacer"></div>
+      <button id="zoom-out" class="tool" aria-label="缩小">−</button>
+      <span id="zoom-label">100%</span>
+      <button id="zoom-in" class="tool" aria-label="放大">+</button>
+      <button id="zoom-reset" class="tool">适合窗口</button>
+    </div>
+    <div id="stage" class="stage"><div id="sheet" class="sheet"><img id="drawing" alt="原理图页面"></div></div>
+    <div id="footer" class="footer"></div>
+  </main>
+  <aside class="right"><div id="inspector" aria-live="polite"></div><div id="scope" class="scope"></div></aside>
+</div>
+<script>
+const DATA=__READER_DATA__;
+const model=DATA.model,report=DATA.report,erc=DATA.erc,pages=DATA.pages;
+const $=id=>document.getElementById(id);
+const state={tab:"components",query:"",page:0,zoom:1,selection:null};
+const refs=new Map(model.components.map(c=>[c.reference,c]));
+const endpoints=new Map();
+model.components.forEach(c=>c.pins.forEach(p=>endpoints.set(c.reference+"."+p.number,{component:c,pin:p})));
+function text(tag,value,cls){const n=document.createElement(tag);n.textContent=value;if(cls)n.className=cls;return n}
+function detail(parent,key,value){parent.append(text("div",key,"label"));parent.append(text("div",String(value??"未知"),"detail"))}
+function selectPage(index){state.page=index;renderPage();renderMarkers()}
+function coords(x,y,page){const b=page.box;return [(x-b[0])/b[2]*100,(y-b[1])/b[3]*100]}
+function locationFor(endpoint){const found=endpoints.get(endpoint);if(!found)return null;
+  const p=found.pin,c=found.component,e=p.evidence||c.evidence;
+  if(e&&Number.isFinite(e.x0)&&Number.isFinite(e.y0)){
+    const pageIndex=pages.findIndex(page=>page.page===e.page);
+    if(pageIndex>=0)return {page:pageIndex,box:[e.x0,e.y0,e.x1,e.y1],label:endpoint};
+  }
+  if(p.position&&pages[0].mime==="image/svg+xml"){
+    const index=e&&e.sheet?pages.findIndex(page=>page.sheet===e.sheet):0;
+    if(index>=0)return {page:index,point:coords(p.position[0],p.position[1],pages[index]),label:endpoint};
+  }
+  if(c.position&&pages[0].mime==="image/svg+xml"){
+    const index=e&&e.sheet?pages.findIndex(page=>page.sheet===e.sheet):0;
+    if(index>=0)return {page:index,point:coords(c.position[0],c.position[1],pages[index]),label:endpoint};
+  }
+  return null;
+}
+function locationForComponent(c){const e=c.evidence;
+  if(e&&Number.isFinite(e.x0)&&Number.isFinite(e.y0)){
+    const pageIndex=pages.findIndex(page=>page.page===e.page);
+    if(pageIndex>=0)return {page:pageIndex,box:[e.x0,e.y0,e.x1,e.y1],label:c.reference};
+  }
+  if(c.position&&pages[0].mime==="image/svg+xml"){
+    const index=e&&e.sheet?pages.findIndex(page=>page.sheet===e.sheet):0;
+    if(index>=0)return {page:index,point:coords(c.position[0],c.position[1],pages[index]),label:c.reference};
+  }
+  return null;
+}
+function locations(){const s=state.selection;if(!s)return [];
+  if(s.type==="component"){const c=refs.get(s.id);return c?[locationForComponent(c)].filter(Boolean):[]}
+  if(s.type==="net"){const n=model.nets.find(n=>n.name===s.id);return n?n.pins.map(locationFor).filter(Boolean):[]}
+  const f=report.findings.find(f=>f.id===s.id);return f?f.endpoints.map(locationFor).filter(Boolean):[];
+}
+function renderPage(){const p=pages[state.page];$("page-label").textContent="图纸 "+(state.page+1)+" / "+pages.length;
+  $("page-select").value=String(state.page);$("drawing").src="data:"+p.mime+";base64,"+p.image;
+  $("drawing").alt="原理图 "+p.label;$("sheet").style.width=(Math.round(state.zoom*100))+"%";
+  $("zoom-label").textContent=Math.round(state.zoom*100)+"%";
+}
+function renderMarkers(){$("sheet").querySelectorAll(".marker").forEach(n=>n.remove());
+  locations().filter(p=>p.page===state.page).forEach(loc=>{
+    const n=text("button","",loc.box?"marker box":"marker");
+    n.type="button";n.title=loc.label;n.setAttribute("aria-label","定位 "+loc.label);
+    if(state.selection.type==="finding")n.classList.add("finding");
+    if(loc.box){n.style.left=(loc.box[0]*100)+"%";n.style.top=(loc.box[1]*100)+"%";
+      n.style.width=((loc.box[2]-loc.box[0])*100)+"%";n.style.height=((loc.box[3]-loc.box[1])*100)+"%"}
+    else{n.style.left=loc.point[0]+"%";n.style.top=loc.point[1]+"%"}
+    n.addEventListener("click",()=>{const found=endpoints.get(loc.label);if(found)select("component",found.component.reference)});
+    $("sheet").append(n);
+  });
+}
+function renderList(){const entries=state.tab==="components"?model.components:state.tab==="nets"?model.nets:state.tab==="findings"?report.findings:erc.findings;
+  const q=state.query.toLocaleLowerCase();
+  const filtered=entries.filter(x=>JSON.stringify(x).toLocaleLowerCase().includes(q));
+  $("count").textContent=filtered.length+" / "+entries.length;
+  $("list").replaceChildren();
+  filtered.forEach(item=>{
+    const id=state.tab==="components"?item.reference:state.tab==="nets"?item.name:item.id;
+    const sub=state.tab==="components"?item.value+" · "+item.pins.length+" pins":state.tab==="nets"?item.pins.length+" endpoints":item.severity.toUpperCase()+" · "+(item.title||item.description);
+    const row=text("button",id,"item");row.type="button";row.append(text("small",sub));
+    if(state.selection&&state.selection.id===id)row.classList.add("active");
+    row.addEventListener("click",()=>select(state.tab==="components"?"component":state.tab==="nets"?"net":state.tab==="erc"?"erc":"finding",id));
+    $("list").append(row);
+  });
+  if(!filtered.length)$("list").append(text("div",state.tab==="erc"&&erc.status!=="complete"?"KiCad ERC："+erc.status:"没有匹配结果","empty"));
+}
+function renderInspector(){const panel=$("inspector");panel.replaceChildren();
+  const s=state.selection;if(!s){panel.append(text("div","选择器件、网络或审查项，查看证据与连接关系。","empty"));return}
+  if(s.type==="component"){const c=refs.get(s.id);if(!c)return;
+    panel.append(text("div","器件","pane-title"),text("h2",c.reference+" · "+c.value));
+    detail(panel,"库标识",c.lib_id);detail(panel,"单元",c.unit);
+    panel.append(text("div","引脚与网络","label"));
+    c.pins.forEach(p=>{const b=text("button",p.number+" "+p.name+" → "+(p.net||"未解析"),"item");
+      b.addEventListener("click",()=>p.net&&select("net",p.net));panel.append(b)});
+  }else if(s.type==="net"){const n=model.nets.find(n=>n.name===s.id);if(!n)return;
+    panel.append(text("div","网络","pane-title"),text("h2",n.name));
+    detail(panel,"标签",n.labels.join(", ")||"无");detail(panel,"端点数量",n.pins.length);
+    n.pins.forEach(id=>{const b=text("button",id,"item");b.addEventListener("click",()=>select("component",id.split(".")[0]));panel.append(b)});
+  }else if(s.type==="erc"){const f=erc.findings.find(f=>f.id===s.id);if(!f)return;
+    panel.append(text("div","KiCad ERC · "+f.severity,"pane-title"),text("h2",f.description));
+    detail(panel,"检查类型",f.type);detail(panel,"图纸路径",f.sheet);
+    panel.append(text("div","KiCad 报告项","label"));
+    f.items.forEach(item=>{panel.append(text("div",item.description||"未命名项目","detail"))});
+    panel.append(text("div","这是 KiCad 自身的 ERC 输出，独立于本项目的审查规则。请在原图核对。","note"));
+  }else{const f=report.findings.find(f=>f.id===s.id);if(!f)return;
+    panel.append(text("div",f.severity+" · "+f.rule,"pane-title"),text("h2",f.title));
+    panel.append(text("p",f.explanation));detail(panel,"处理建议",f.recommendation);
+    detail(panel,"规则来源",f.origin);detail(panel,"状态",f.status);
+    panel.append(text("div","证据端点","label"));
+    f.evidence.forEach(e=>{const b=text("button",e.endpoint+" · "+(e.net||"未解析"),"item");
+      b.addEventListener("click",()=>select("component",e.endpoint.split(".")[0]));panel.append(b)});
+    if(f.missing_information.length)panel.append(text("div","缺少信息："+f.missing_information.join("；"),"note"));
+  }
+}
+function select(type,id){state.selection={type,id};const loc=locations()[0];if(loc)state.page=loc.page;
+  renderPage();renderMarkers();renderList();renderInspector();
+}
+function setTab(tab){state.tab=tab;document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));renderList()}
+pages.forEach((p,i)=>{const option=text("option",p.label);option.value=String(i);$("page-select").append(option)});
+$("page-select").addEventListener("change",e=>selectPage(Number(e.target.value)));
+document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+$("search").addEventListener("input",e=>{state.query=e.target.value;renderList()});
+$("zoom-in").addEventListener("click",()=>{state.zoom=Math.min(4,Math.round((state.zoom+0.25)*100)/100);renderPage()});
+$("zoom-out").addEventListener("click",()=>{state.zoom=Math.max(.5,Math.round((state.zoom-.25)*100)/100);renderPage()});
+$("zoom-reset").addEventListener("click",()=>{state.zoom=1;renderPage()});
+document.addEventListener("keydown",e=>{if(e.key==="/"&&document.activeElement!==$("search")){e.preventDefault();$("search").focus()}
+  if(e.key==="Escape"&&document.activeElement===$("search")){$("search").value="";state.query="";renderList();$("search").blur()}
+  if(e.key==="ArrowRight"&&document.activeElement!==$("search"))selectPage(Math.min(pages.length-1,state.page+1));
+  if(e.key==="ArrowLeft"&&document.activeElement!==$("search"))selectPage(Math.max(0,state.page-1));
+});
+$("source-name").textContent=model.path.split(/[\\/]/).pop();
+$("trust").textContent=model.connectivity_status==="source_resolved"?"原生连接关系":"连接关系未核实";
+if(model.connectivity_status!=="source_resolved")$("trust").classList.add("warn");
+$("footer").textContent="器件 "+model.components.length+" · 网络 "+model.nets.length+" · 审查候选 "+report.findings.length+" · KiCad ERC "+erc.findings.length+" · "+report.limitations.length+" 项限制";
+const scopeDetails=document.createElement("details");
+scopeDetails.open=model.sheets.length>0||model.connectivity_status!=="source_resolved";
+scopeDetails.append(text("summary","覆盖范围与限制 · "+(report.limitations.length+report.source_warnings.length)));
+const scopeList=document.createElement("ul");
+report.limitations.concat(report.source_warnings).forEach(value=>scopeList.append(text("li",value)));
+if(erc.status==="complete"&&erc.ignored_checks.length)scopeList.append(text("li","KiCad ERC 有 "+erc.ignored_checks.length+" 类检查被忽略；查看原项目 ERC 设置。"));
+if(erc.status==="unavailable")scopeList.append(text("li","KiCad ERC 未完成："+erc.message));
+scopeDetails.append(scopeList);$("scope").append(scopeDetails);
+renderPage();renderList();renderInspector();
+</script>
+</body>
+</html>

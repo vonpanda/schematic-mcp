@@ -44,6 +44,17 @@ class Workspace:
         self._state = (schematic, CircuitGraph(schematic))
         return schematic
 
+    def open_project(self, path: str) -> Schematic:
+        """Resolve a complete KiCad hierarchy through its official XML netlist export."""
+        from schematic_mcp.reader import _kicad_cli, _project_model
+
+        candidate = self._resolve(path)
+        if not candidate.is_file() or candidate.suffix.lower() != ".kicad_sch":
+            raise ValueError("Expected a native KiCad .kicad_sch project root")
+        schematic, _ = _project_model(candidate, _kicad_cli(None), self.root)
+        self._state = (schematic, CircuitGraph(schematic))
+        return schematic
+
     def extract(self, path: str, pages: list[int] | None = None, client=None) -> Schematic:
         """Explicit remote extraction. Commit state only after all pages validate."""
         from schematic_mcp.llm import JSONClient, LLMConfig

@@ -85,7 +85,7 @@ The canonical model adds:
 - Evidence with page numbers on components, pins and nets.
 - Source SHA-256 of the exact byte snapshot rendered, model, prompt version, selected pages, per-page claimed coverage and returned token usage. Confidence is explicitly uncalibrated.
 
-Physical identity of multi-page/multi-unit components and hierarchical port instances is **not** resolved by the vision adapter. Page-qualified symbols remain separate. Ordinary off-page arrows are not assumed global. Review reports disclose this boundary. Native KiCad child sheets also remain outside the current parser's expanded coverage.
+Physical identity of multi-page/multi-unit components and hierarchical port instances is **not** resolved by the vision adapter. Page-qualified symbols remain separate. Ordinary off-page arrows are not assumed global. Review reports disclose this boundary. The offline native KiCad parser remains root-sheet-only; the separate KiCad CLI XML-netlist path resolves full project connectivity.
 
 ## What review checks
 
