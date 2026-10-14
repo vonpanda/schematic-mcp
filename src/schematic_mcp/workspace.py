@@ -7,6 +7,7 @@ from pathlib import Path
 
 from schematic_mcp.graph import CircuitGraph
 from schematic_mcp.models import Schematic
+from schematic_mcp.knowledge import KnowledgeBase
 from schematic_mcp.parsers import KiCadSchematicParser
 
 
@@ -15,6 +16,12 @@ class Workspace:
         root = os.environ.get("SCHEMATIC_MCP_ROOT")
         self.root = Path(root).expanduser().resolve() if root else None
         self._state: tuple[Schematic, CircuitGraph] | None = None
+        self.knowledge: KnowledgeBase | None = None
+
+    def load_knowledge(self, path: str) -> KnowledgeBase:
+        knowledge = KnowledgeBase.load(self._resolve(path), self.root)
+        self.knowledge = knowledge
+        return knowledge
 
     @property
     def schematic(self) -> Schematic | None:

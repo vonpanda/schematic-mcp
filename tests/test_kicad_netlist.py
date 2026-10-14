@@ -1,9 +1,11 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from schematic_mcp.models import Component, Pin, Schematic
 from schematic_mcp.parsers.kicad_netlist import parse_kicad_netlist
-from schematic_mcp.reader import _project_sheets
+from schematic_mcp.reader import _project_model, _project_sheets
 
 
 XML = b"""<?xml version="1.0"?>
@@ -51,6 +53,37 @@ def test_project_netlist_rejects_invalid_references_and_duplicate_nodes():
     with pytest.raises(ValueError, match="duplicate pin"):
         parse_kicad_netlist(XML.replace(b'<node ref="U2" pin="3"/>',
                                          b'<node ref="U1" pin="1"/>'), Path("root.kicad_sch"))
+    with pytest.raises(ValueError, match="unknown or duplicate pin"):
+        parse_kicad_netlist(XML.replace(b'<node ref="U1" pin="2" pintype="unspecified+no_connect"/>',
+                                         b'<node ref="U9" pin="2" pintype="unspecified+no_connect"/>'), Path("root.kicad_sch"))
+
+
+def test_repeated_sheet_instance_uses_symbol_uuid_for_visual_position(tmp_path, monkeypatch):
+    source = tmp_path / "root.kicad_sch"
+    source.write_text("source", encoding="utf-8")
+    child = tmp_path / "power.kicad_sch"
+    child.write_text("child", encoding="utf-8")
+    parsed = Schematic(path=str(child), format="kicad_sch", components=[
+        Component(reference="U7", value="REG", lib_id="Demo:REG", position=(12, 34),
+                  evidence={"source_uuid": "symbol-uuid"},
+                  pins=[Pin(number="2", position=(10, 34))]),
+        Component(reference="U7", value="REG", lib_id="Demo:REG", position=(42, 34),
+                  evidence={"source_uuid": "second-uuid"},
+                  pins=[Pin(number="3", position=(40, 34))])])
+    monkeypatch.setattr("schematic_mcp.reader._project_sheets", lambda *_: {source: Schematic(str(source), "kicad_sch"), child: parsed})
+
+    def export_netlist(command, **kwargs):
+        output = Path(command[command.index("--output") + 1])
+        output.write_bytes(XML.replace(b'<comp ref="U2">', b'<comp ref="U42"><tstamps>symbol-uuid second-uuid</tstamps>')
+                           .replace(b'<node ref="U2" pin="3"/>', b'<node ref="U42" pin="3"/>'))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr("schematic_mcp.reader.subprocess.run", export_netlist)
+    model, _ = _project_model(source, "kicad-cli", tmp_path)
+    component = next(c for c in model.components if c.reference == "U42")
+    assert component.position == (12, 34)
+    assert component.pins[0].position == (40, 34)
+    assert component.evidence["path"] == str(child)
 
 
 def test_project_sheet_preflight_rejects_symlink_escape(tmp_path):

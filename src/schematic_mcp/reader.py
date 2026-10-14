@@ -142,7 +142,20 @@ def _project_model(source: Path, cli: str, root: Path | None) -> tuple[object, d
         parsed = source_sheets.get(path)
         if parsed is None:
             continue
-        matches = [candidate for candidate in parsed.components if candidate.reference == component.reference]
+        source_uuid = (component.evidence or {}).get("source_uuid")
+        if source_uuid:
+            matches = []
+            for uuid in source_uuid.split():
+                candidates = [candidate for candidate in parsed.components
+                              if (candidate.evidence or {}).get("source_uuid") == uuid]
+                if len(candidates) != 1:
+                    matches = []
+                    break
+                matches.append(candidates[0])
+            if not matches:
+                continue
+        else:
+            matches = [candidate for candidate in parsed.components if candidate.reference == component.reference]
         if not matches:
             continue
         component.position = matches[0].position
@@ -157,6 +170,9 @@ def _project_model(source: Path, cli: str, root: Path | None) -> tuple[object, d
     unplaced = sum(component.position is None for component in model.components)
     if unplaced:
         model.warnings.append(f"{unplaced} component placements could not be matched to SVG pages; connectivity is retained but visual location needs manual lookup.")
+    unplaced_pins = sum(pin.position is None for component in model.components for pin in component.pins)
+    if unplaced_pins:
+        model.warnings.append(f"{unplaced_pins} pin positions could not be matched; component-center markers for these pins are approximate.")
     if any(hashlib.sha256(path.read_bytes()).hexdigest() != digest for path, digest in hashes.items()):
         raise RuntimeError("Project sheet changed during netlist export; retry")
     return model, hashes
@@ -164,7 +180,7 @@ def _project_model(source: Path, cli: str, root: Path | None) -> tuple[object, d
 
 def make_reader(source: str, output: Path, *, root: str | None = None, vision: bool = False,
                 pages: list[int] | None = None, llm_review: bool = False,
-                kicad_cli: str | None = None) -> dict:
+                kicad_cli: str | None = None, knowledge: str | None = None) -> dict:
     """Build one offline HTML file. Neither SVG export nor the browser supplies electrical facts."""
     if output.exists():
         raise FileExistsError(f"Reader output already exists: {output}")
@@ -175,6 +191,8 @@ def make_reader(source: str, output: Path, *, root: str | None = None, vision: b
     workspace = Workspace()
     if root:
         workspace.root = Path(root).expanduser().resolve()
+    if knowledge:
+        workspace.load_knowledge(knowledge)
     candidate = workspace._resolve(source)
     if vision:
         model = workspace.extract(source, pages)
@@ -203,7 +221,8 @@ def make_reader(source: str, output: Path, *, root: str | None = None, vision: b
                                            for path, digest in sheet_hashes.items()):
         raise RuntimeError("Child sheet changed between extraction and page rendering; retry")
     # Finish all optional remote work before publishing an output file.
-    report = review_schematic(model, JSONClient(LLMConfig.from_env()) if llm_review else None)
+    report = review_schematic(model, JSONClient(LLMConfig.from_env()) if llm_review else None,
+                              workspace.knowledge)
     payload = {"model": model.to_dict(), "report": report, "erc": erc, "pages": artwork}
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     safe = encoded.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
@@ -229,10 +248,12 @@ def main() -> None:
     parser.add_argument("--pages", type=int, nargs="+", help="One-based PDF pages")
     parser.add_argument("--llm-review", action="store_true", help="Send model to configured review provider")
     parser.add_argument("--kicad-cli", help="Path to the KiCad CLI renderer")
+    parser.add_argument("--knowledge", help="Local JSON component knowledge manifest with pinned PDF sources")
     args = parser.parse_args()
     try:
         result = make_reader(args.path, args.output, root=args.root, vision=args.vision,
-                             pages=args.pages, llm_review=args.llm_review, kicad_cli=args.kicad_cli)
+                             pages=args.pages, llm_review=args.llm_review, kicad_cli=args.kicad_cli,
+                             knowledge=args.knowledge)
         print(json.dumps({"ok": True, **result}))
     except Exception as exc:
         print(json.dumps({"ok": False, "error": type(exc).__name__, "message": str(exc)}), file=sys.stderr)

@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 from pathlib import Path
+import re
 import shutil
 
 import pytest
@@ -42,6 +44,19 @@ def test_reader_is_portable_and_does_not_overwrite(tmp_path, monkeypatch, fake_c
     with pytest.raises(FileExistsError):
         make_reader(str(FIXTURE), output, root=str(FIXTURE.parent))
     assert output.read_text(encoding="utf-8") == html
+
+
+def test_reader_embeds_exact_part_knowledge_without_pdf_or_network(tmp_path, monkeypatch, fake_cli):
+    monkeypatch.setattr("schematic_mcp.reader._render_kicad", fake_artwork)
+    output = tmp_path / "knowledge.html"
+    make_reader(str(FIXTURE), output, root=str(FIXTURE.parent),
+                knowledge=str(FIXTURE.parent / "knowledge/components.json"))
+    html = output.read_text(encoding="utf-8")
+    payload = json.loads(re.search(r"const DATA=(.*?);\nconst model=", html, re.S).group(1))
+    assert payload["report"]["knowledge"]["coverage"] == {"matched": 1, "total": 2}
+    assert payload["report"]["knowledge"]["matched"][0]["facts"][0]["status"] == "quote_located"
+    assert base64.b64encode((FIXTURE.parent / "knowledge/demo-device.pdf").read_bytes()).decode() not in html
+    assert "fetch(" not in html
 
 
 def test_reader_rejects_root_escape_and_existing_output_before_render(tmp_path, monkeypatch, fake_cli):

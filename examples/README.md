@@ -13,6 +13,9 @@ Do not contribute proprietary customer schematics or files that contain confiden
 - a `GND` net;
 - pin-to-net resolution;
 - signal tracing between endpoints.
+- an exact synthetic `MPN`/`Manufacturer` match to `knowledge/components.json` for evidence-flow testing.
+
+`knowledge/demo-device.pdf` is an original one-page fictional datasheet generated for this repository. It describes no real part. The JSON manifest pins its hash, revision and a quoted fact; use `schematic-review minimal.kicad_sch --knowledge knowledge/components.json --output ./report` from this directory to inspect knowledge coverage.
 
 ## Try it through MCP
 

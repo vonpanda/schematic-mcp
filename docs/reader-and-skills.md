@@ -13,6 +13,9 @@ On macOS the reader also discovers /Applications/KiCad/KiCad.app/Contents/MacOS/
 
 For a multi-sheet project, the reader preflights child-sheet paths, uses KiCad's XML netlist export for the complete electrical graph, and attaches positions from native sheets where matching symbols are unambiguous. It checks the root and child-sheet hashes again before publishing. KiCad CLI draws the pages and runs its own ERC as a separate cross-check. KiCad ERC results are shown on their own tab rather than merged with this project's rules. KiCad ERC locations are shown as reported text until coordinate mapping is verified.
 
+Repeated child-sheet instances are matched to the source drawing using symbol UUIDs when their instance reference designators differ. Optional `--knowledge PATH` adds exact-MPN, pinned-PDF facts to the inspector and report; see [component knowledge](component-knowledge.md). A fact's PDF page and extracted quote are evidence for human inspection, not an automatic electrical verdict.
+When a source pin coordinate is unavailable, the reader marks the component center as an approximate visual pointer and reports the count of unresolved pin positions.
+
 The MCP tool open_schematic still uses the offline root-sheet parser. Use open_schematic_project or schematic-review --project for full-hierarchy KiCad queries and reports; these require the installed KiCad CLI. The project graph is derived from KiCad's own netlist and marked with that provenance. A source-resolved graph means the exported file's connectivity was read, not that the design is correct.
 
 Exact KiCad XML net names are preserved, including sheet-path prefixes such as /SENSOR_OUT. Pin-map contracts for the full-project mode should use those names, or explicitly map project names in the calling workflow; the library does not silently strip a prefix that could distinguish two nets.

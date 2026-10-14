@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- Local exact-MPN component knowledge manifests with pinned PDF revisions/hashes, validated page citations, source coverage in reports/reader, and MCP lookup tools.
 - Portable offline schematic reader with KiCad SVG or PDF/image pages, searchable components/nets/findings, separate KiCad ERC results, page navigation, zoom, and source-linked highlights.
 - Full-project KiCad XML netlist adapter for reader and open_schematic_project / schematic-review --project, with child-sheet path/hash checks and position enrichment.
 - Repo-local skills for schematic intake, connectivity tracing, and evidence-based electrical review.
@@ -18,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Synthetic HTTP/CLI/MCP stdio integration tests, PDF/image rendering and adversarial/failure/recovery regression coverage.
 
 ### Changed
+- Repeated KiCad sheet instances now use source symbol UUIDs to recover visual positions when instance reference designators differ; KiCad XML NC endpoints are validated instead of silently skipped.
 - Canonical JSON now includes schema version, connectivity status, optional source evidence and provenance. Pin-map validation returns an additional `unverified` count and cannot pass for LLM/imported graphs.
 - Workspace model/graph publication is atomic and failed extraction/import preserves the previous document.
 - KiCad NC markers are retained on pins, including contradictory wired NC markers for review.

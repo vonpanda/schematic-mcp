@@ -9,11 +9,12 @@ The core should stay format-neutral: EDA adapters produce a canonical electrical
 ## Release gates
 
 1. Merge the existing vision/review work after its own review, then rebase the reader branch. Verify the combined wheel, MCP transports and documentation against the release branch.
-2. Validate the reader's interaction design in the locally deployed Penpot instance, then check its implementation in a browser on macOS, Windows and Linux. Verify page switching, component/net/finding navigation, zoom, text overflow, large projects and offline behavior.
+2. Validate the reader's interaction design in Figma as selected by the project owner, then check its implementation in a browser on macOS, Windows and Linux. Verify page switching, component/net/finding navigation, zoom, text overflow, large projects and offline behavior.
 3. Expand KiCad fixtures for repeated sheet instances, deep hierarchy, buses, multi-unit parts, aliases, NC markers, malformed XML, missing sheet paths and source changes during export. Verify cross-sheet nets against KiCad's netlist for each case.
 4. Assemble a permissioned real-project acceptance set with human-reviewed component IDs, pins, net membership and defect labels. Track per-format extraction coverage, false connections, finding false positives/negatives, review time, latency and cost. Maintain a regression ledger for every corrected error.
 5. Require every finding to show the exact source location, observed fact, inference and missing evidence. Review high-impact electrical rules against actual datasheets and part numbers before describing them as validated.
 6. Run package and supply-chain checks, clean installation, MCP client interoperability, root/symlink boundaries, private-data redaction, docs examples and a source-to-report round trip. Keep the public release tagged only after these gates pass.
+7. Validate exact-MPN knowledge matching with a permissioned BOM and datasheet set. Check wrong-manufacturer, near-match, missing-MPN, changed PDF, wrong-page, scanned-PDF and unrelated-citation cases. Measure matched component coverage and require a hardware engineer to confirm the meaning of each fact used in a defect claim.
 
 ## Initial public story
 
@@ -23,7 +24,8 @@ Publish English and Chinese setup guides, a small rule catalog with false-positi
 
 ## Current blockers
 
-- The Penpot connector is configured locally but is not exposed to this task's callable tools, so the interaction design and visual QA have not been completed there.
+- The selected Figma team's new-file API returns `Invalid planKey`; no editable design file has been created. An existing editable file URL or working creation endpoint is needed for design QA.
 - The existing vision/review PR is still a draft and this branch depends on it.
 - The two public KiCad projects used for local compatibility checks have not been human-labeled for defect accuracy.
 - The review rules cover a small subset of hardware risks. ERC counts from those projects are untriaged and must not be described as confirmed defects.
+- The first local component knowledge adapter is implemented with a synthetic PDF. No permissioned real BOM/datasheet acceptance set has been labeled, and no online discovery adapter has been validated.

@@ -30,6 +30,7 @@ main{min-width:0;display:flex;flex-direction:column;background:#172437}
 .sheet{position:relative;flex:none;box-shadow:0 12px 45px #0008;border:1px solid #607188;background:white}.sheet img{display:block;width:100%;height:auto}
 .marker{position:absolute;width:16px;height:16px;transform:translate(-50%,-50%);border:2px solid #0d2537;background:#54ecc3;border-radius:50%;box-shadow:0 0 0 5px #31d7af44;cursor:pointer;padding:0}
 .marker.finding{background:#ffad6a;box-shadow:0 0 0 5px #ff9e4255}.marker.box{width:auto;height:auto;transform:none;background:#ffad6a25;border:2px solid #fa8f52;border-radius:3px;box-shadow:none}
+.marker.approximate{background:#9ab1ca;border-style:dashed;box-shadow:0 0 0 5px #9ab1ca44}
 .marker:hover,.marker:focus{outline:2px solid #fff;z-index:2}
 .right h2{font-size:18px;margin:4px 16px 10px;overflow-wrap:anywhere}.right p{margin:8px 16px;color:#b9cbe0}
 .label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#83a0bd;margin:18px 16px 4px}
@@ -80,6 +81,7 @@ main{min-width:0;display:flex;flex-direction:column;background:#172437}
 <script>
 const DATA=__READER_DATA__;
 const model=DATA.model,report=DATA.report,erc=DATA.erc,pages=DATA.pages;
+const knowledge=report.knowledge;
 const $=id=>document.getElementById(id);
 const state={tab:"components",query:"",page:0,zoom:1,selection:null};
 const refs=new Map(model.components.map(c=>[c.reference,c]));
@@ -101,7 +103,7 @@ function locationFor(endpoint){const found=endpoints.get(endpoint);if(!found)ret
   }
   if(c.position&&pages[0].mime==="image/svg+xml"){
     const index=e&&e.sheet?pages.findIndex(page=>page.sheet===e.sheet):0;
-    if(index>=0)return {page:index,point:coords(c.position[0],c.position[1],pages[index]),label:endpoint};
+    if(index>=0)return {page:index,point:coords(c.position[0],c.position[1],pages[index]),label:endpoint,approximate:true};
   }
   return null;
 }
@@ -129,7 +131,8 @@ function renderPage(){const p=pages[state.page];$("page-label").textContent="图
 function renderMarkers(){$("sheet").querySelectorAll(".marker").forEach(n=>n.remove());
   locations().filter(p=>p.page===state.page).forEach(loc=>{
     const n=text("button","",loc.box?"marker box":"marker");
-    n.type="button";n.title=loc.label;n.setAttribute("aria-label","定位 "+loc.label);
+    n.type="button";n.title=loc.label+(loc.approximate?" · 器件中心，非引脚精确位置":"");n.setAttribute("aria-label","定位 "+loc.label+(loc.approximate?"（大致位置）":""));
+    if(loc.approximate)n.classList.add("approximate");
     if(state.selection.type==="finding")n.classList.add("finding");
     if(loc.box){n.style.left=(loc.box[0]*100)+"%";n.style.top=(loc.box[1]*100)+"%";
       n.style.width=((loc.box[2]-loc.box[0])*100)+"%";n.style.height=((loc.box[3]-loc.box[1])*100)+"%"}
@@ -158,6 +161,14 @@ function renderInspector(){const panel=$("inspector");panel.replaceChildren();
   if(s.type==="component"){const c=refs.get(s.id);if(!c)return;
     panel.append(text("div","器件","pane-title"),text("h2",c.reference+" · "+c.value));
     detail(panel,"库标识",c.lib_id);detail(panel,"单元",c.unit);
+    if(knowledge){const part=knowledge.matched.find(item=>item.reference===c.reference);
+      panel.append(text("div","器件资料","label"));
+      if(part){detail(panel,"匹配料号",part.manufacturer+" · "+part.mpn);
+        part.facts.forEach(f=>{const doc=part.documents.find(d=>d.id===f.document_id);
+          detail(panel,f.name,f.value);panel.append(text("div",(doc?doc.title+" · "+doc.revision:"资料")+" · PDF 第 "+f.page+" 页 · "+f.locator+" · "+(f.status==="quote_located"?"原文已定位，含义待工程师核对":"页码已核对，事实待核对"),"note"))});
+      }else{const reason=Object.entries(knowledge.unresolved).find(([,refs])=>refs.includes(c.reference));
+        panel.append(text("div","没有可核对的器件资料（"+(reason?reason[0]:"not_found")+"）。","note"))}
+    }
     panel.append(text("div","引脚与网络","label"));
     c.pins.forEach(p=>{const b=text("button",p.number+" "+p.name+" → "+(p.net||"未解析"),"item");
       b.addEventListener("click",()=>p.net&&select("net",p.net));panel.append(b)});
@@ -178,6 +189,7 @@ function renderInspector(){const panel=$("inspector");panel.replaceChildren();
     panel.append(text("div","证据端点","label"));
     f.evidence.forEach(e=>{const b=text("button",e.endpoint+" · "+(e.net||"未解析"),"item");
       b.addEventListener("click",()=>select("component",e.endpoint.split(".")[0]));panel.append(b)});
+    if(f.knowledge_sources&&f.knowledge_sources.length)detail(panel,"器件资料引用",f.knowledge_sources.join("、"));
     if(f.missing_information.length)panel.append(text("div","缺少信息："+f.missing_information.join("；"),"note"));
   }
 }
@@ -200,7 +212,7 @@ document.addEventListener("keydown",e=>{if(e.key==="/"&&document.activeElement!=
 $("source-name").textContent=model.path.split(/[\\/]/).pop();
 $("trust").textContent=model.connectivity_status==="source_resolved"?"原生连接关系":"连接关系未核实";
 if(model.connectivity_status!=="source_resolved")$("trust").classList.add("warn");
-$("footer").textContent="器件 "+model.components.length+" · 网络 "+model.nets.length+" · 审查候选 "+report.findings.length+" · KiCad ERC "+erc.findings.length+" · "+report.limitations.length+" 项限制";
+$("footer").textContent="器件 "+model.components.length+" · 网络 "+model.nets.length+" · 审查候选 "+report.findings.length+" · KiCad ERC "+erc.findings.length+" · 器件资料 "+(knowledge?knowledge.coverage.matched+"/"+knowledge.coverage.total:"未加载")+" · "+report.limitations.length+" 项限制";
 const scopeDetails=document.createElement("details");
 scopeDetails.open=model.sheets.length>0||model.connectivity_status!=="source_resolved";
 scopeDetails.append(text("summary","覆盖范围与限制 · "+(report.limitations.length+report.source_warnings.length)));

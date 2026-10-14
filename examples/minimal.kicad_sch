@@ -14,5 +14,5 @@
   (wire (pts (xy 10 15) (xy 30 15)))
   (label "SENSOR_OUT" (at 20 10 0))
   (label "GND" (at 20 15 0))
-  (symbol (lib_id "MCU:DemoMCU") (at 10 10 0) (unit 1) (property "Reference" "U1") (property "Value" "DemoMCU"))
+  (symbol (lib_id "MCU:DemoMCU") (at 10 10 0) (unit 1) (property "Reference" "U1") (property "Value" "DemoMCU") (property "MPN" "X100") (property "Manufacturer" "Example Semi"))
   (symbol (lib_id "Sensor:DemoSensor") (at 30 10 0) (unit 1) (property "Reference" "U2") (property "Value" "DemoSensor")))

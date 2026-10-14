@@ -22,6 +22,8 @@ An AI coding agent writing firmware often needs answers such as:
 
 The server parses the EDA file deterministically, builds a canonical component/pin/net model, and exposes that model through MCP tools and resources.
 
+For part-specific review, an optional local knowledge manifest binds exact manufacturer/MPN fields to pinned datasheets and page-cited facts. The graph and knowledge base feed the review layer; missing part identity stays unresolved. See [component knowledge and evidence](docs/component-knowledge.md).
+
 The design principle is conservative: when connectivity cannot be resolved confidently, surface a warning instead of inventing an electrical connection.
 
 ### Design focus
@@ -54,6 +56,8 @@ The reader combines the original drawing, parsed component/net data and evidence
 
 Native KiCad artwork is rendered with the official KiCad CLI. Single-sheet connectivity uses this project's offline parser; multi-sheet reader projects use KiCad's XML netlist export for the complete hierarchy. KiCad ERC appears separately from this project's findings. PDF/image input is supported through explicitly requested vision extraction. The repo-local Codex workflows in .agents/skills/ cover intake, signal tracing and engineering review. See [reader and skills](docs/reader-and-skills.md) for setup, privacy and coverage limits.
 
+Add `--knowledge examples/knowledge/components.json` to the synthetic reader/review example to inspect an exact-MPN match and pinned PDF citation. The bundled datasheet is fictional and demonstrates only the evidence flow.
+
 ## V0.1 features
 
 - Parse modern KiCad `.kicad_sch` S-expression files
@@ -79,6 +83,8 @@ For a complete KiCad hierarchy, open_schematic_project(path) uses the locally in
 | --- | --- |
 | `extract_schematic(path, pages=None)` | Explicitly send PDF/image pages to a vision LLM; load an unverified graph |
 | `open_schematic_model(path)` | Reopen an exported/corrected canonical JSON graph offline |
+| `load_component_knowledge(path)` | Load a local part manifest and verify cited PDF hashes/pages |
+| `component_knowledge(reference)` | Return exact MPN match, facts and unresolved status |
 | `review_schematic()` | Run local electrical checks with source evidence |
 | `review_schematic_with_llm()` | Send the structured model to the configured LLM for cited review hypotheses |
 | `open_schematic(path)` | Load a `.kicad_sch` file and build the circuit graph |

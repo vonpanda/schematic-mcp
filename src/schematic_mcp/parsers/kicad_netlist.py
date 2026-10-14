@@ -42,7 +42,8 @@ def parse_kicad_netlist(xml: bytes, source: Path) -> Schematic:
                             evidence={"path": str(source), "sheet": sheet, "reference": reference, "pin": number}))
         component = Component(reference=reference, value=value, lib_id=f"{lib}:{part}" if lib else part,
                               properties=properties, pins=pins,
-                              evidence={"path": str(source), "sheet": sheet, "reference": reference})
+                              evidence={"path": str(source), "sheet": sheet, "reference": reference,
+                                        "source_uuid": item.findtext("tstamps", default="")})
         components.append(component)
         by_ref[reference] = component
     endpoints = {(c.reference, p.number): p for c in components for p in c.pins}
@@ -57,9 +58,12 @@ def parse_kicad_netlist(xml: bytes, source: Path) -> Schematic:
         nodes = item.findall("node")
         if nodes and all("no_connect" in node.get("pintype", "") for node in nodes):
             for node in nodes:
-                pin = endpoints.get((node.get("ref", ""), node.get("pin", "")))
-                if pin is not None:
-                    pin.no_connect = True
+                key = (node.get("ref", ""), node.get("pin", ""))
+                pin = endpoints.get(key)
+                if pin is None or key in assigned:
+                    raise ValueError("KiCad XML net has an unknown or duplicate pin")
+                assigned.add(key)
+                pin.no_connect = True
             continue
         ids = []
         for node in nodes:
