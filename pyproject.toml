@@ -22,17 +22,23 @@ classifiers = [
 ]
 dependencies = [
   "mcp[cli]>=2,<3",
+  "pydantic>=2.12,<3",
+  "httpx>=0.28,<1",
 ]
 
 [project.optional-dependencies]
+vision = ["Pillow>=11,<13", "pypdfium2>=4.30,<6"]
 dev = [
   "build>=1.2",
   "pytest>=8",
   "twine>=6",
+  "Pillow>=11,<13",
+  "pypdfium2>=4.30,<6",
 ]
 
 [project.scripts]
 schematic-mcp = "schematic_mcp.server:main"
+schematic-review = "schematic_mcp.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/vonpanda/schematic-mcp"

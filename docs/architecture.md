@@ -56,3 +56,11 @@ MCP host / AI agent
 - Datasheet context
 - Firmware pin-map cross-checking
 - PCB/BOM/Gerber context
+
+## Opt-in confidence-based adapter and review
+
+`parsers/vision.py` renders bounded PDF/image snapshots and sends page overview/detail images through `llm.py` to a configured Chat Completions-compatible vision provider. `vision_schema.py` validates both JSON and graph integrity before canonical conversion. Every component/pin/net observation keeps source evidence. The adapter preserves page scope and explicit ambiguity and never labels its output source-resolved.
+
+`models.py` carries provenance and exposes a connectivity status. `graph.py` propagates that status and disallows successful firmware-pin validation on unverified data. `model_io.py` supports graph-validated offline JSON reload without trusting imported provenance claims. `Workspace` publishes a model/graph pair atomically only after successful parsing, retaining the old state on failure.
+
+`review.py` runs deterministic electrical rules and optional separately requested LLM hypotheses. Findings carry source-linked endpoints and coverage limitations; no report grants design approval. `cli.py` provides model/report exports independently of MCP. Read [vision and review](vision-and-review.md) for the schema, deployment boundaries and real-model validation gate.

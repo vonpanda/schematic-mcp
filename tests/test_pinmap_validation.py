@@ -30,6 +30,7 @@ def test_validate_pinmap_detects_swapped_firmware_assignments():
         "missing": 0,
         "unconnected": 0,
         "ambiguous": 0,
+        "unverified": 0,
     }
 
     mismatches = {

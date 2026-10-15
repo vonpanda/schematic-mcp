@@ -11,6 +11,8 @@ from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
 from schematic_mcp.workspace import Workspace
+from schematic_mcp.review import review_schematic as run_review
+from schematic_mcp.llm import JSONClient, LLMConfig
 
 workspace = Workspace()
 mcp = MCPServer(
@@ -19,7 +21,9 @@ mcp = MCPServer(
     instructions=(
         "Open a KiCad schematic, then use component/net/pin tools to inspect its "
         "electrical connectivity. Signal tracing is net-based and never invents "
-        "internal connectivity through ICs."
+        "internal connectivity through ICs. For PDF/images call extract_schematic explicitly; "
+        "this sends drawings to an LLM API. Vision data is UNVERIFIED, never an exact netlist. "
+        "Use review_schematic for local checks or review_schematic_with_llm for remote hypotheses."
     ),
 )
 
@@ -37,6 +41,49 @@ _OPEN_SCHEMATIC = ToolAnnotations(
     open_world_hint=False,
 )
 
+_REMOTE_EXTRACTION = ToolAnnotations(
+    read_only_hint=False, destructive_hint=False, idempotent_hint=False, open_world_hint=True,
+)
+_REMOTE_REVIEW = ToolAnnotations(
+    read_only_hint=True, destructive_hint=False, idempotent_hint=False, open_world_hint=True,
+)
+
+
+@mcp.tool(annotations=_REMOTE_EXTRACTION)
+def extract_schematic(path: str, pages: list[int] | None = None) -> dict[str, Any]:
+    """Send PDF/image pages to the configured vision LLM and load an UNVERIFIED graph.
+
+    This transmits drawing content and may incur API charges. Configure
+    SCHEMATIC_LLM_API_KEY/MODEL/BASE_URL in the server environment.
+    pages selects one-based PDF pages; omitted pages are not reviewed.
+    """
+    try:
+        return {"ok": True, "summary": workspace.extract(path, pages).summary()}
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def review_schematic() -> dict[str, Any]:
+    """Run local electrical rules and return evidence-linked findings and coverage limits."""
+    try:
+        return {"ok": True, "review": run_review(workspace.require()[0])}
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool(annotations=_REMOTE_REVIEW)
+def review_schematic_with_llm() -> dict[str, Any]:
+    """Send the current structured model to the configured LLM for review hypotheses.
+
+    Transmits component, pin, net and source metadata; may incur API charges.
+    Findings are not engineering sign-off and must cite existing endpoint IDs.
+    """
+    try:
+        return {"ok": True, "review": run_review(workspace.require()[0], JSONClient(LLMConfig.from_env()))}
+    except Exception as exc:
+        return _error(exc)
+
 
 def _error(exc: Exception) -> dict[str, Any]:
     return {"ok": False, "error": type(exc).__name__, "message": str(exc)}
@@ -47,6 +94,15 @@ def open_schematic(path: str) -> dict[str, Any]:
     """Open a local KiCad .kicad_sch file and build its canonical circuit graph."""
     try:
         return {"ok": True, "summary": workspace.open(path).summary()}
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool(annotations=_OPEN_SCHEMATIC)
+def open_schematic_model(path: str) -> dict[str, Any]:
+    """Load an exported/corrected canonical JSON graph offline; imported data stays UNVERIFIED."""
+    try:
+        return {"ok": True, "summary": workspace.open_model(path).summary()}
     except Exception as exc:
         return _error(exc)
 
@@ -78,7 +134,7 @@ def list_components(query: str = "") -> dict[str, Any]:
             for c in schematic.components
             if not needle or needle in f"{c.reference} {c.value} {c.lib_id}".lower()
         ]
-        return {"ok": True, "count": len(items), "components": items}
+        return {"ok": True, "connectivity_status": schematic.connectivity_status, "count": len(items), "components": items}
     except Exception as exc:
         return _error(exc)
 
@@ -87,11 +143,11 @@ def list_components(query: str = "") -> dict[str, Any]:
 def get_component(reference: str) -> dict[str, Any]:
     """Get one component including properties, pins, and resolved net names."""
     try:
-        _, graph = workspace.require()
+        schematic, graph = workspace.require()
         component = graph.component(reference)
         if component is None:
             raise KeyError(f"component not found: {reference}")
-        return {"ok": True, "component": asdict(component)}
+        return {"ok": True, "connectivity_status": schematic.connectivity_status, "component": asdict(component)}
     except Exception as exc:
         return _error(exc)
 
@@ -100,11 +156,11 @@ def get_component(reference: str) -> dict[str, Any]:
 def get_pin(reference: str, pin_number: str) -> dict[str, Any]:
     """Get one component pin and its resolved electrical net."""
     try:
-        _, graph = workspace.require()
+        schematic, graph = workspace.require()
         pin = graph.pin(reference, pin_number)
         if pin is None:
             raise KeyError(f"pin not found: {reference}.{pin_number}")
-        return {"ok": True, "reference": reference, "pin": asdict(pin)}
+        return {"ok": True, "connectivity_status": schematic.connectivity_status, "reference": reference, "pin": asdict(pin)}
     except Exception as exc:
         return _error(exc)
 
@@ -120,7 +176,7 @@ def list_nets(query: str = "") -> dict[str, Any]:
             for n in schematic.nets
             if not needle or needle in f"{n.name} {' '.join(n.labels)} {' '.join(n.pins)}".lower()
         ]
-        return {"ok": True, "count": len(items), "nets": items}
+        return {"ok": True, "connectivity_status": schematic.connectivity_status, "count": len(items), "nets": items}
     except Exception as exc:
         return _error(exc)
 
@@ -129,11 +185,11 @@ def list_nets(query: str = "") -> dict[str, Any]:
 def get_net(name: str) -> dict[str, Any]:
     """Get a net by exact name, including labels and all connected component pins."""
     try:
-        _, graph = workspace.require()
+        schematic, graph = workspace.require()
         net = graph.net(name)
         if net is None:
             raise KeyError(f"net not found: {name}")
-        return {"ok": True, "net": asdict(net)}
+        return {"ok": True, "connectivity_status": schematic.connectivity_status, "net": asdict(net)}
     except Exception as exc:
         return _error(exc)
 
@@ -142,7 +198,7 @@ def get_net(name: str) -> dict[str, Any]:
 def trace_signal(reference: str, pin_number: str) -> dict[str, Any]:
     """Trace one pin to every other pin on the same resolved electrical net."""
     try:
-        _, graph = workspace.require()
+        schematic, graph = workspace.require()
         return {"ok": True, **graph.endpoints(reference, pin_number)}
     except Exception as exc:
         return _error(exc)
@@ -152,7 +208,7 @@ def trace_signal(reference: str, pin_number: str) -> dict[str, Any]:
 def get_mcu_pinmap(reference: str) -> dict[str, Any]:
     """Return a compact pin-to-net map for an MCU or any multi-pin component."""
     try:
-        _, graph = workspace.require()
+        schematic, graph = workspace.require()
         return {"ok": True, **graph.mcu_pinmap(reference)}
     except Exception as exc:
         return _error(exc)
@@ -166,7 +222,7 @@ def validate_pinmap(reference: str, expected: dict[str, str]) -> dict[str, Any]:
     expected net labels, for example ``{"GPIO8": "I2C_SDA"}``.
     """
     try:
-        _, graph = workspace.require()
+        schematic, graph = workspace.require()
         return graph.validate_pinmap(reference, expected)
     except Exception as exc:
         return _error(exc)

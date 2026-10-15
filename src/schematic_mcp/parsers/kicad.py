@@ -279,7 +279,8 @@ class KiCadSchematicParser(SchematicParser):
             pin_ids: list[str] = []
             for component, pin in connected:
                 point = _key(pin.position or root_point)
-                if point in no_connects and not labels and len(connected) == 1:
+                pin.no_connect = point in no_connects
+                if point in no_connects and not labels and len(connected) == 1 and not any(_point_on_segment(point, a, b) for a, b in segments):
                     pin.net = None
                     continue
                 pin.net = name

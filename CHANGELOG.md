@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- Explicit PDF/PNG/JPEG/WebP vision-LLM extraction with structured schema validation, page evidence, document fingerprint, scoped candidate nets and bounded rendering/API requests.
+- Configurable Chat Completions-compatible endpoint/model, strict schema or explicit JSON mode, redacted provider failures and bounded retries.
+- Local electrical review rules and separately requested LLM review hypotheses with validated endpoint citations and coverage limitations.
+- Offline canonical JSON reload, graph consistency validation and the `schematic-review` CLI exporting JSON and Markdown reports.
+- MCP extraction, JSON import and review tools; explicit remote-call annotations and unverified-data propagation.
+- Synthetic HTTP/CLI/MCP stdio integration tests, PDF/image rendering and adversarial/failure/recovery regression coverage.
+
+### Changed
+- Canonical JSON now includes schema version, connectivity status, optional source evidence and provenance. Pin-map validation returns an additional `unverified` count and cannot pass for LLM/imported graphs.
+- Workspace model/graph publication is atomic and failed extraction/import preserves the previous document.
+- KiCad NC markers are retained on pins, including contradictory wired NC markers for review.
+
+### Validation boundary
+- No real-provider/model accuracy claim or production sign-off. Real API and human-labeled schematic acceptance remain required.
+
 ## [0.1.0] - 2026-08-19
 
 ### Added

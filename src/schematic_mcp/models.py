@@ -13,6 +13,8 @@ class Pin:
     electrical_type: str = ""
     position: tuple[float, float] | None = None
     net: str | None = None
+    evidence: dict[str, Any] | None = None
+    no_connect: bool = False
 
 
 @dataclass(slots=True)
@@ -25,6 +27,7 @@ class Component:
     rotation: float = 0.0
     properties: dict[str, str] = field(default_factory=dict)
     pins: list[Pin] = field(default_factory=list)
+    evidence: dict[str, Any] | None = None
 
 
 @dataclass(slots=True)
@@ -32,6 +35,7 @@ class Net:
     name: str
     labels: list[str] = field(default_factory=list)
     pins: list[str] = field(default_factory=list)
+    evidence: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -51,13 +55,18 @@ class Schematic:
     nets: list[Net] = field(default_factory=list)
     sheets: list[SheetRef] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    provenance: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def connectivity_status(self) -> str:
+        return "unverified" if self.provenance.get("method") in {"llm_vision", "imported_json"} else "source_resolved"
 
     @property
     def name(self) -> str:
         return Path(self.path).stem
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return {"schema_version": "1.0", "connectivity_status": self.connectivity_status, **asdict(self)}
 
     def summary(self) -> dict[str, Any]:
         connected_pins = sum(1 for c in self.components for p in c.pins if p.net)
@@ -74,4 +83,6 @@ class Schematic:
             "connected_pins": connected_pins,
             "child_sheets": len(self.sheets),
             "warnings": self.warnings,
+            "connectivity_status": self.connectivity_status,
+            "provenance": self.provenance,
         }

@@ -32,6 +32,20 @@ That makes the project complementary to editor/IPC automation: editor tools are 
 
 See [`docs/project-positioning.md`](docs/project-positioning.md) for the project boundaries and ecosystem thesis.
 
+## PDF/image extraction and schematic defect review
+
+Turn PDF, PNG, JPEG or WebP drawings into component/pin/net JSON using a configured vision LLM API, inspect the graph through MCP, and generate an evidence-linked review report. KiCad files continue to parse locally without an API call.
+
+```bash
+pip install -e ".[vision]"
+# Configure SCHEMATIC_LLM_MODEL, SCHEMATIC_LLM_API_KEY and optionally SCHEMATIC_LLM_BASE_URL.
+schematic-review board.pdf --vision --llm-review --output ./board-report
+```
+
+The new directory contains `model.json`, `review.json` and `review.md`. Extracted pins, components and nets retain page/rectangle evidence, source hash and model provenance. Local rules flag output conflicts, NC/wire contradictions and unresolved inputs; optional LLM review adds cited hypotheses. Exported JSON can be corrected and reopened offline. Every vision/import query is marked `unverified`, and firmware pin validation cannot pass on this data.
+
+See [configuration, complete workflow, data contract, limits and validation gate](docs/vision-and-review.md). This is engineering review assistance; zero findings does not establish a correct circuit, and synthetic tests do not establish real-model extraction accuracy.
+
 ## V0.1 features
 
 - Parse modern KiCad `.kicad_sch` S-expression files
@@ -53,6 +67,10 @@ See [`docs/project-positioning.md`](docs/project-positioning.md) for the project
 
 | Tool | Purpose |
 | --- | --- |
+| `extract_schematic(path, pages=None)` | Explicitly send PDF/image pages to a vision LLM; load an unverified graph |
+| `open_schematic_model(path)` | Reopen an exported/corrected canonical JSON graph offline |
+| `review_schematic()` | Run local electrical checks with source evidence |
+| `review_schematic_with_llm()` | Send the structured model to the configured LLM for cited review hypotheses |
 | `open_schematic(path)` | Load a `.kicad_sch` file and build the circuit graph |
 | `schematic_summary()` | Return counts, format info and parser warnings |
 | `list_components(query="")` | Search components |
