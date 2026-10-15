@@ -2,7 +2,7 @@
 
 ## Claim to demonstrate
 
-An open-source, local-first review workspace can open a KiCad hierarchy, preserve KiCad's exact pin/net graph, show the original pages, separate KiCad ERC from its own review rules, and attach exact-MPN datasheet evidence when a local manifest is supplied. PDF/image extraction and LLM review are explicit opt-in paths with unverified results. The tool assists engineers; it does not approve a design.
+An open-source, local-first review workspace can open a KiCad hierarchy, preserve KiCad's exact pin/net graph, show the original pages, separate KiCad ERC from its own review rules, and attach exact-MPN datasheet evidence when a local manifest is supplied. When identities live outside the schematic, an optional source-bound CSV BOM maps references to exact manufacturer/MPN values. PDF/image extraction and LLM review are explicit opt-in paths with unverified results. The tool assists engineers; it does not approve a design.
 
 Every public example should link to one tagged commit, one redistributable input project, an exact command, the generated output, and a table of known limitations. Show the same workflow without an API key first; show remote extraction separately with cost/privacy notes. Do not claim defect-detection accuracy, superiority or production sign-off until a human-labeled evaluation supports it.
 

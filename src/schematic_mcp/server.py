@@ -69,7 +69,7 @@ def extract_schematic(path: str, pages: list[int] | None = None) -> dict[str, An
 def review_schematic() -> dict[str, Any]:
     """Run local electrical rules and return evidence-linked findings and coverage limits."""
     try:
-        return {"ok": True, "review": run_review(workspace.require()[0], knowledge=workspace.knowledge)}
+        return {"ok": True, "review": run_review(workspace.require()[0], knowledge=workspace.knowledge, bom=workspace.bom)}
     except Exception as exc:
         return _error(exc)
 
@@ -83,7 +83,7 @@ def review_schematic_with_llm() -> dict[str, Any]:
     """
     try:
         return {"ok": True, "review": run_review(workspace.require()[0], JSONClient(LLMConfig.from_env()),
-                                                   workspace.knowledge)}
+                                                   workspace.knowledge, workspace.bom)}
     except Exception as exc:
         return _error(exc)
 
@@ -102,6 +102,17 @@ def load_component_knowledge(path: str) -> dict[str, Any]:
         return _error(exc)
 
 
+@mcp.tool(annotations=_OPEN_SCHEMATIC)
+def load_component_bom(path: str) -> dict[str, Any]:
+    """Load a source-bound local CSV BOM after opening a native KiCad schematic."""
+    try:
+        bom = workspace.load_bom(path)
+        return {"ok": True, "assigned": len(bom.assignments), "bom_sha256": bom.sha256,
+                "project_sha256": bom.project_sha256}
+    except Exception as exc:
+        return _error(exc)
+
+
 @mcp.tool(annotations=_READ_ONLY)
 def component_knowledge(reference: str) -> dict[str, Any]:
     """Return exact MPN-matched facts, PDF provenance and unresolved status for one component."""
@@ -112,7 +123,7 @@ def component_knowledge(reference: str) -> dict[str, Any]:
         component = graph.component(reference)
         if component is None:
             raise KeyError(f"component not found: {reference}")
-        context = workspace.knowledge.context(schematic)
+        context = workspace.knowledge.context(schematic, workspace.bom)
         match = next((part for part in context["matched"] if part["reference"] == reference), None)
         return {"ok": True, "reference": reference, "status": "matched" if match else
                 next((status for status, refs in context["unresolved"].items() if reference in refs), "not_found"),

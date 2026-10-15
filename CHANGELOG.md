@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- Source-bound CSV BOM matching for exact manufacturer/MPN identities when symbol fields are absent; CLI review exports a fillable template, and reader/review/MCP reject stale or conflicting assignments.
 - Local exact-MPN component knowledge manifests with pinned PDF revisions/hashes, validated page citations, source coverage in reports/reader, and MCP lookup tools.
 - Portable offline schematic reader with KiCad SVG or PDF/image pages, searchable components/nets/findings, separate KiCad ERC results, page navigation, zoom, and source-linked highlights.
 - Full-project KiCad XML netlist adapter for reader and open_schematic_project / schematic-review --project, with child-sheet path/hash checks and position enrichment.

@@ -8,6 +8,7 @@ from pydantic import Field
 from schematic_mcp.llm import JSONClient, LLMError
 from schematic_mcp.models import Schematic
 from schematic_mcp.knowledge import KnowledgeBase
+from schematic_mcp.bom import Bom
 from schematic_mcp.parsers.vision_schema import StrictModel, Text
 
 
@@ -42,7 +43,7 @@ Do not claim that absence of findings means the schematic is correct.
 
 
 def review_schematic(model: Schematic, llm: JSONClient | None = None,
-                     knowledge: KnowledgeBase | None = None) -> dict:
+                     knowledge: KnowledgeBase | None = None, bom: Bom | None = None) -> dict:
     entries = [(f"{c.reference}.{p.number}", c, p) for c in model.components for p in c.pins]
     counts = Counter(e for e, _, _ in entries)
     endpoints = {e: (c, p) for e, c, p in entries if counts[e] == 1}
@@ -51,9 +52,13 @@ def review_schematic(model: Schematic, llm: JSONClient | None = None,
         "No design sign-off: these checks do not prove electrical correctness.",
         "Voltage/current ratings, timing, analog stability, polarity, layout and datasheet compliance require source documents and engineering validation.",
     ]
-    knowledge_context = knowledge.context(model) if knowledge else None
+    if bom:
+        bom.verify(model)
+    knowledge_context = knowledge.context(model, bom) if knowledge else None
     if knowledge_context is None:
         limitations.append("No component knowledge manifest supplied; datasheet-specific checks have no coverage.")
+        if bom:
+            limitations.append("BOM identities were loaded but no component knowledge manifest was supplied; datasheet-specific checks have no coverage.")
     elif knowledge_context["coverage"]["matched"] < knowledge_context["coverage"]["total"]:
         count = knowledge_context["coverage"]["total"] - knowledge_context["coverage"]["matched"]
         limitations.append(f"{count} components have no exact manufacturer/MPN knowledge match; no datasheet claims were inferred for them.")
@@ -144,6 +149,8 @@ def review_schematic(model: Schematic, llm: JSONClient | None = None,
                          "unknown_pin_types": unknown, "llm_review": llm is not None,
                          "knowledge": knowledge_context["coverage"] if knowledge_context else None},
             "knowledge": knowledge_context,
+            "bom": {"sha256": bom.sha256, "project_sha256": bom.project_sha256,
+                    "assigned": len(bom.assignments)} if bom else None,
             "findings": findings, "source_warnings": model.warnings, "limitations": limitations}
 
 
@@ -155,6 +162,8 @@ def markdown_report(report: dict) -> str:
              f"Findings: {report['summary']['findings']} (errors: {report['summary']['error']}, warnings: {report['summary']['warning']}).", ""]
     knowledge = report.get("knowledge")
     sources = {}
+    if report.get("bom"):
+        lines += [f"BOM assignments: {report['bom']['assigned']}; BOM SHA-256 {safe(report['bom']['sha256'])}; project SHA-256 {safe(report['bom']['project_sha256'])}.", ""]
     if knowledge:
         count = knowledge["coverage"]
         lines += [f"Component knowledge: {count['matched']}/{count['total']} exact MPN matches; manifest SHA-256 {safe(knowledge['manifest_sha256'])}.", ""]

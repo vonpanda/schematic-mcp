@@ -164,6 +164,7 @@ function renderInspector(){const panel=$("inspector");panel.replaceChildren();
     if(knowledge){const part=knowledge.matched.find(item=>item.reference===c.reference);
       panel.append(text("div","器件资料","label"));
       if(part){detail(panel,"匹配料号",part.manufacturer+" · "+part.mpn);
+        detail(panel,"料号来源",part.identity_source==="bom"?"BOM":part.identity_source==="bom_and_symbol"?"BOM 与原理图字段一致":"原理图字段");
         part.facts.forEach(f=>{const doc=part.documents.find(d=>d.id===f.document_id);
           detail(panel,f.name,f.value);panel.append(text("div",(doc?doc.title+" · "+doc.revision:"资料")+" · PDF 第 "+f.page+" 页 · "+f.locator+" · "+(f.status==="quote_located"?"原文已定位，含义待工程师核对":"页码已核对，事实待核对"),"note"))});
       }else{const reason=Object.entries(knowledge.unresolved).find(([,refs])=>refs.includes(c.reference));

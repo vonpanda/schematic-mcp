@@ -42,6 +42,24 @@ schematic-reader examples/minimal.kicad_sch \
 
 In MCP, call `load_component_knowledge(path)`, then `component_knowledge(reference)` or `review_schematic()`. With `--root` or `SCHEMATIC_MCP_ROOT`, the manifest and every linked PDF must stay inside that root, including resolved symlinks. Loading a new manifest is atomic; a failed load leaves the previous one in place. The manifest and documents are rehashed when knowledge is used. Reader and report artifacts include fact text and source metadata, so treat them as confidential whenever the input is confidential.
 
+## BOM identity when the schematic has no MPN
+
+`schematic-review` writes `bom-template.csv` beside `model.json` for native KiCad files. Fill exact `Manufacturer` and `MPN` values for the references you know, and delete rows whose identity is unknown. Keep the `Project SHA256` column unchanged. It fingerprints the root and every child sheet, so a BOM from another revision is rejected. The CSV is UTF-8 with exactly these columns, in this order:
+
+```csv
+Reference,Manufacturer,MPN,Project SHA256
+U1,Example Semi,X100,<fingerprint copied from bom-template.csv>
+```
+
+The example above is illustrative; the angle-bracket text is not a valid fingerprint. To create a real BOM, run `schematic-review examples/minimal.kicad_sch --output ./first-review`, edit `first-review/bom-template.csv`, then run:
+
+```sh
+schematic-review examples/minimal.kicad_sch --knowledge examples/knowledge/components.json --bom first-review/bom-template.csv --output ./review-with-bom
+schematic-reader examples/minimal.kicad_sch --knowledge examples/knowledge/components.json --bom first-review/bom-template.csv --output ./reader-with-bom.html
+```
+
+Fill or remove every blank row before loading. BOM references must occur exactly once in the schematic. If an MPN or manufacturer in a symbol disagrees with the BOM, that reference is unresolved and no datasheet fact is attached. The CSV, project and PDFs are rechecked when evidence is used. Imported JSON and vision extraction cannot accept this source-bound BOM. In MCP, open the native schematic/project, call `load_component_bom(path)` and `load_component_knowledge(path)`, then query `component_knowledge(reference)` or review. The BOM supplies part identity, not evidence for an electrical rating; the pinned document and page still supply that evidence. Do not commit private BOMs to this repository.
+
 An optional LLM review receives only the matched, cited knowledge records alongside the electrical graph. A model finding that uses a knowledge fact must cite an exact `reference/fact-id`; invalid or unrelated citations are rejected. This is a hypothesis for an engineer to check, not a design sign-off. Current deterministic rules remain limited to graph-derived checks and do not turn a transcribed PDF limit into an automatic pass/fail verdict.
 
 ## Next data integrations

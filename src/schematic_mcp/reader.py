@@ -20,6 +20,8 @@ from schematic_mcp.parsers.kicad import KiCadSchematicParser
 from schematic_mcp.parsers.kicad_netlist import parse_kicad_netlist
 from schematic_mcp.review import review_schematic
 from schematic_mcp.workspace import Workspace
+from schematic_mcp.bom import project_fingerprint
+from schematic_mcp.bom import Bom
 
 MAX_BUNDLE_BYTES = 80 * 1024 * 1024
 
@@ -133,6 +135,7 @@ def _project_model(source: Path, cli: str, root: Path | None) -> tuple[object, d
         raise RuntimeError("KiCad netlist refers to a sheet not covered by source preflight")
     model.provenance.update({"sha256": hashes[source],
                              "sheet_sha256": {str(path): digest for path, digest in hashes.items()},
+                             "project_sha256": project_fingerprint(source, hashes),
                              "hierarchy_complete": True})
     # Positions come from the native files; KiCad's exported netlist remains the
     # authority for cross-sheet pin-to-net membership.
@@ -180,7 +183,8 @@ def _project_model(source: Path, cli: str, root: Path | None) -> tuple[object, d
 
 def make_reader(source: str, output: Path, *, root: str | None = None, vision: bool = False,
                 pages: list[int] | None = None, llm_review: bool = False,
-                kicad_cli: str | None = None, knowledge: str | None = None) -> dict:
+                kicad_cli: str | None = None, knowledge: str | None = None,
+                bom: str | None = None) -> dict:
     """Build one offline HTML file. Neither SVG export nor the browser supplies electrical facts."""
     if output.exists():
         raise FileExistsError(f"Reader output already exists: {output}")
@@ -188,6 +192,8 @@ def make_reader(source: str, output: Path, *, root: str | None = None, vision: b
         raise ValueError("Reader output must have a .html extension")
     if pages and not vision:
         raise ValueError("--pages requires --vision")
+    if bom and vision:
+        raise ValueError("--bom requires a native KiCad schematic")
     workspace = Workspace()
     if root:
         workspace.root = Path(root).expanduser().resolve()
@@ -204,6 +210,8 @@ def make_reader(source: str, output: Path, *, root: str | None = None, vision: b
         sheet_hashes = None
         if model.sheets:
             model, sheet_hashes = _project_model(candidate, cli, workspace.root)
+        if bom:
+            workspace.bom = Bom.load(workspace._resolve(bom), model, workspace.root)
         artwork = _render_kicad(candidate, cli)
         erc = _kicad_erc(candidate, cli)
         for page in artwork:
@@ -222,7 +230,7 @@ def make_reader(source: str, output: Path, *, root: str | None = None, vision: b
         raise RuntimeError("Child sheet changed between extraction and page rendering; retry")
     # Finish all optional remote work before publishing an output file.
     report = review_schematic(model, JSONClient(LLMConfig.from_env()) if llm_review else None,
-                              workspace.knowledge)
+                              workspace.knowledge, workspace.bom)
     payload = {"model": model.to_dict(), "report": report, "erc": erc, "pages": artwork}
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     safe = encoded.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
@@ -249,11 +257,12 @@ def main() -> None:
     parser.add_argument("--llm-review", action="store_true", help="Send model to configured review provider")
     parser.add_argument("--kicad-cli", help="Path to the KiCad CLI renderer")
     parser.add_argument("--knowledge", help="Local JSON component knowledge manifest with pinned PDF sources")
+    parser.add_argument("--bom", help="Source-bound UTF-8 CSV with exact reference, manufacturer and MPN")
     args = parser.parse_args()
     try:
         result = make_reader(args.path, args.output, root=args.root, vision=args.vision,
                              pages=args.pages, llm_review=args.llm_review, kicad_cli=args.kicad_cli,
-                             knowledge=args.knowledge)
+                             knowledge=args.knowledge, bom=args.bom)
         print(json.dumps({"ok": True, **result}))
     except Exception as exc:
         print(json.dumps({"ok": False, "error": type(exc).__name__, "message": str(exc)}), file=sys.stderr)

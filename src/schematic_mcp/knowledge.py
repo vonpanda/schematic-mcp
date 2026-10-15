@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 import pypdfium2 as pdfium
 
 from schematic_mcp.models import Component, Schematic
+from schematic_mcp.bom import Bom
 
 MAX_MANIFEST_BYTES = 8 * 1024 * 1024
 MAX_DOCUMENT_BYTES = 100 * 1024 * 1024
@@ -210,9 +211,12 @@ class KnowledgeBase:
                     raise ValueError(f"Knowledge document changed after loading: {document.path}")
                 checked.add(key)
 
-    def match(self, component: Component) -> tuple[Part | None, str]:
+    def match(self, component: Component, bom: Bom | None = None) -> tuple[Part | None, str]:
         mpns = {component.properties[key].strip() for key in MPN_FIELDS
                 if component.properties.get(key, "").strip()}
+        assignment = bom.assignments.get(component.reference.casefold()) if bom else None
+        if assignment:
+            mpns.add(assignment.mpn)
         if not mpns:
             return None, "missing_mpn"
         if len({value.casefold() for value in mpns}) != 1:
@@ -221,6 +225,8 @@ class KnowledgeBase:
         candidates = self._by_mpn.get(mpn.casefold(), [])
         makers = {component.properties[key].strip() for key in MAKER_FIELDS
                   if component.properties.get(key, "").strip()}
+        if assignment:
+            makers.add(assignment.manufacturer)
         if len({value.casefold() for value in makers}) > 1:
             return None, "conflicting_manufacturer_fields"
         if makers:
@@ -230,8 +236,10 @@ class KnowledgeBase:
             return None, "ambiguous_mpn" if len(candidates) > 1 else "not_found"
         return candidates[0], "matched"
 
-    def context(self, model: Schematic) -> dict:
+    def context(self, model: Schematic, bom: Bom | None = None) -> dict:
         self.verify()
+        if bom:
+            bom.verify(model)
         matched = []
         unresolved: dict[str, list[str]] = {}
         reference_counts = Counter(c.reference for c in model.components)
@@ -239,15 +247,20 @@ class KnowledgeBase:
             if reference_counts[component.reference] != 1:
                 unresolved.setdefault("ambiguous_reference", []).append(component.reference)
                 continue
-            part, status = self.match(component)
+            part, status = self.match(component, bom)
             if part is None:
                 unresolved.setdefault(status, []).append(component.reference)
                 continue
             matched.append({"reference": component.reference, "manufacturer": part.manufacturer,
                             "mpn": part.mpn, "part_id": part.id,
+                            "identity_source": "bom_and_symbol" if bom and component.reference.casefold() in bom.assignments and
+                            any(component.properties.get(key, "").strip() for key in MPN_FIELDS)
+                            else "bom" if bom and component.reference.casefold() in bom.assignments else "symbol",
                             "documents": [asdict(doc) for doc in part.documents],
                             "facts": [{**asdict(fact), "citation_id": f"{component.reference}/{fact.id}"}
                                       for fact in part.facts]})
-        return {"schema_version": "1.0", "manifest_sha256": self.sha256, "matched": matched,
+        return {"schema_version": "1.0", "manifest_sha256": self.sha256,
+                "bom_sha256": bom.sha256 if bom else None, "project_sha256": bom.project_sha256 if bom else None,
+                "matched": matched,
                 "unresolved": unresolved, "coverage": {"matched": len(matched),
                                                        "total": len(model.components)}}

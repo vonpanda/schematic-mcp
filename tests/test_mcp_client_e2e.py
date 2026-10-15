@@ -31,6 +31,7 @@ async def _exercise_mcp_protocol() -> None:
                 "open_schematic_project",
                 "open_schematic_model",
                 "load_component_knowledge",
+                "load_component_bom",
                 "component_knowledge",
                 "extract_schematic",
                 "review_schematic",
@@ -52,7 +53,7 @@ async def _exercise_mcp_protocol() -> None:
                 assert tool.annotations.destructive_hint is False
                 assert tool.annotations.idempotent_hint is (name not in {"extract_schematic", "review_schematic_with_llm"})
                 assert tool.annotations.open_world_hint is (name in {"extract_schematic", "review_schematic_with_llm"})
-                assert tool.annotations.read_only_hint is (name not in {"open_schematic", "open_schematic_project", "open_schematic_model", "extract_schematic", "load_component_knowledge"})
+                assert tool.annotations.read_only_hint is (name not in {"open_schematic", "open_schematic_project", "open_schematic_model", "extract_schematic", "load_component_knowledge", "load_component_bom"})
 
             opened = await _call_ok(
                 client,

@@ -24,6 +24,8 @@ The server parses the EDA file deterministically, builds a canonical component/p
 
 For part-specific review, an optional local knowledge manifest binds exact manufacturer/MPN fields to pinned datasheets and page-cited facts. The graph and knowledge base feed the review layer; missing part identity stays unresolved. See [component knowledge and evidence](docs/component-knowledge.md).
 
+When MPNs live in a separate BOM, `schematic-review` exports a project-bound `bom-template.csv`. Fill exact manufacturer and MPN values, then pass `--bom PATH` alongside `--knowledge PATH` to `schematic-review` or `schematic-reader`. A mismatched project fingerprint or conflicting symbol field is rejected or left unresolved; see the [BOM workflow](docs/component-knowledge.md#bom-identity-when-the-schematic-has-no-mpn).
+
 The design principle is conservative: when connectivity cannot be resolved confidently, surface a warning instead of inventing an electrical connection.
 
 ### Design focus
@@ -84,6 +86,7 @@ For a complete KiCad hierarchy, open_schematic_project(path) uses the locally in
 | `extract_schematic(path, pages=None)` | Explicitly send PDF/image pages to a vision LLM; load an unverified graph |
 | `open_schematic_model(path)` | Reopen an exported/corrected canonical JSON graph offline |
 | `load_component_knowledge(path)` | Load a local part manifest and verify cited PDF hashes/pages |
+| `load_component_bom(path)` | Load source-bound reference-to-part CSV assignments |
 | `component_knowledge(reference)` | Return exact MPN match, facts and unresolved status |
 | `review_schematic()` | Run local electrical checks with source evidence |
 | `review_schematic_with_llm()` | Send the structured model to the configured LLM for cited review hypotheses |

@@ -8,6 +8,7 @@ from pathlib import Path
 from schematic_mcp.graph import CircuitGraph
 from schematic_mcp.models import Schematic
 from schematic_mcp.knowledge import KnowledgeBase
+from schematic_mcp.bom import Bom, project_fingerprint
 from schematic_mcp.parsers import KiCadSchematicParser
 
 
@@ -17,11 +18,17 @@ class Workspace:
         self.root = Path(root).expanduser().resolve() if root else None
         self._state: tuple[Schematic, CircuitGraph] | None = None
         self.knowledge: KnowledgeBase | None = None
+        self.bom: Bom | None = None
 
     def load_knowledge(self, path: str) -> KnowledgeBase:
         knowledge = KnowledgeBase.load(self._resolve(path), self.root)
         self.knowledge = knowledge
         return knowledge
+
+    def load_bom(self, path: str) -> Bom:
+        bom = Bom.load(self._resolve(path), self.require()[0], self.root)
+        self.bom = bom
+        return bom
 
     @property
     def schematic(self) -> Schematic | None:
@@ -47,8 +54,11 @@ class Workspace:
         if candidate.suffix.lower() != ".kicad_sch":
             raise ValueError("V0.1 currently supports .kicad_sch files only")
         schematic = KiCadSchematicParser().parse(candidate)
-        schematic.provenance = {"method": "native_parser", "sha256": hashlib.sha256(candidate.read_bytes()).hexdigest()}
+        digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
+        schematic.provenance = {"method": "native_parser", "sha256": digest,
+                                "project_sha256": project_fingerprint(candidate, {candidate: digest})}
         self._state = (schematic, CircuitGraph(schematic))
+        self.bom = None
         return schematic
 
     def open_project(self, path: str) -> Schematic:
@@ -60,6 +70,7 @@ class Workspace:
             raise ValueError("Expected a native KiCad .kicad_sch project root")
         schematic, _ = _project_model(candidate, _kicad_cli(None), self.root)
         self._state = (schematic, CircuitGraph(schematic))
+        self.bom = None
         return schematic
 
     def extract(self, path: str, pages: list[int] | None = None, client=None) -> Schematic:
@@ -75,6 +86,7 @@ class Workspace:
         schematic = VisionSchematicParser(client or JSONClient(LLMConfig.from_env())).parse(candidate, pages)
         graph = CircuitGraph(schematic)
         self._state = (schematic, graph)
+        self.bom = None
         return schematic
 
     def open_model(self, path: str) -> Schematic:
@@ -84,6 +96,7 @@ class Workspace:
             raise ValueError("Expected a canonical .json model file")
         schematic = load_model(candidate)
         self._state = (schematic, CircuitGraph(schematic))
+        self.bom = None
         return schematic
 
     def require(self) -> tuple[Schematic, CircuitGraph]:
