@@ -28,7 +28,11 @@ async def _exercise_mcp_protocol() -> None:
             tools = {tool.name: tool for tool in listed.tools}
             expected_names = {
                 "open_schematic",
+                "open_schematic_project",
                 "open_schematic_model",
+                "load_component_knowledge",
+                "load_component_bom",
+                "component_knowledge",
                 "extract_schematic",
                 "review_schematic",
                 "review_schematic_with_llm",
@@ -49,7 +53,7 @@ async def _exercise_mcp_protocol() -> None:
                 assert tool.annotations.destructive_hint is False
                 assert tool.annotations.idempotent_hint is (name not in {"extract_schematic", "review_schematic_with_llm"})
                 assert tool.annotations.open_world_hint is (name in {"extract_schematic", "review_schematic_with_llm"})
-                assert tool.annotations.read_only_hint is (name not in {"open_schematic", "open_schematic_model", "extract_schematic"})
+                assert tool.annotations.read_only_hint is (name not in {"open_schematic", "open_schematic_project", "open_schematic_model", "extract_schematic", "load_component_knowledge", "load_component_bom"})
 
             opened = await _call_ok(
                 client,
@@ -58,6 +62,15 @@ async def _exercise_mcp_protocol() -> None:
             )
             assert opened["ok"] is True
             assert opened["summary"]["components"] == 3
+
+            loaded = await _call_ok(client, "load_component_knowledge", {"path": "knowledge/components.json"})
+            assert loaded["ok"] is True
+            assert loaded["parts"] == 1
+            missing = await _call_ok(client, "component_knowledge", {"reference": "U1"})
+            assert missing["status"] == "missing_mpn"
+            failed = await _call_ok(client, "load_component_knowledge", {"path": "../outside.json"})
+            assert failed["ok"] is False
+            assert isolated_workspace.knowledge.sha256 == loaded["manifest_sha256"]
 
             summary = await _call_ok(client, "schematic_summary")
             assert summary["ok"] is True

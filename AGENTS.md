@@ -36,6 +36,10 @@ On Windows, use the appropriate virtual-environment activation command instead o
 
 Every behavior change should add or update tests. Parser bugs should be reduced to the smallest safe fixture that reproduces the issue.
 
+## Review workflow skills
+
+For an unfamiliar source drawing, use $schematic-intake. For pin/net questions or firmware contracts, use $schematic-trace. For defect review, use $schematic-review. These repo-local skills live in .agents/skills/ and preserve the source-evidence and uncertainty rules below.
+
 ## Electrical correctness invariants
 
 1. **Never invent connectivity.** If the file does not provide enough information to resolve a connection, preserve an unknown state or emit a warning.

@@ -41,6 +41,15 @@ def test_power_flags_not_counted_as_physical_power_drivers():
     assert not report["findings"]
 
 
+def test_two_power_outputs_on_same_device_are_not_cross_device_conflict():
+    model = Schematic(path="same-package.kicad_sch", format="kicad_sch",
+                      components=[Component("U1", "MCU", "MCU:Demo", pins=[
+                          Pin("E7", electrical_type="power_out", net="VCAP"),
+                          Pin("F8", electrical_type="power_out", net="VCAP")])],
+                      nets=[Net("VCAP", pins=["U1.E7", "U1.F8"])])
+    assert "POWER_OUTPUT_CONFLICT" not in {f["rule"] for f in review_schematic(model)["findings"]}
+
+
 def test_unknown_pin_and_unexpanded_hierarchy_never_get_clean_bill():
     model = circuit(["unspecified", "input"])
     model.sheets = [SheetRef("child", "child.kicad_sch")]

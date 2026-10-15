@@ -179,7 +179,8 @@ class KiCadSchematicParser(SchematicParser):
                 )
                 for pin in selected.values()
             ]
-            components.append(Component(reference=properties.get("Reference", "?"), value=properties.get("Value", lib_id.split(":")[-1]), lib_id=lib_id, unit=unit, position=position, rotation=rotation, properties=properties, pins=pins))
+            components.append(Component(reference=properties.get("Reference", "?"), value=properties.get("Value", lib_id.split(":")[-1]), lib_id=lib_id, unit=unit, position=position, rotation=rotation, properties=properties, pins=pins,
+                                        evidence={"source_uuid": scalar(child(symbol, "uuid"))}))
         return components
 
     @staticmethod

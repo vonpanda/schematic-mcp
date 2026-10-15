@@ -8,12 +8,11 @@ version = "0.1.0"
 description = "MCP server that enables AI agents to inspect and reason over hardware schematics."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 authors = [{ name = "SYANKOR" }]
 keywords = ["mcp", "schematic", "kicad", "hardware", "eda", "ai-agent"]
 classifiers = [
   "Development Status :: 3 - Alpha",
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -24,10 +23,11 @@ dependencies = [
   "mcp[cli]>=2,<3",
   "pydantic>=2.12,<3",
   "httpx>=0.28,<1",
+  "pypdfium2>=4.30,<6",
 ]
 
 [project.optional-dependencies]
-vision = ["Pillow>=11,<13", "pypdfium2>=4.30,<6"]
+vision = ["Pillow>=11,<13"]
 dev = [
   "build>=1.2",
   "pytest>=8",
@@ -39,6 +39,10 @@ dev = [
 [project.scripts]
 schematic-mcp = "schematic_mcp.server:main"
 schematic-review = "schematic_mcp.cli:main"
+schematic-reader = "schematic_mcp.reader:main"
+
+[tool.setuptools.package-data]
+schematic_mcp = ["reader.html"]
 
 [project.urls]
 Homepage = "https://github.com/vonpanda/schematic-mcp"

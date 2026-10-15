@@ -37,6 +37,8 @@ MCP host / AI agent
 4. **Filesystem access is explicit.** `SCHEMATIC_MCP_ROOT` can constrain agent-visible files to one directory tree.
 5. **Warnings are data.** Ambiguous or partially supported structures are surfaced instead of silently guessed.
 
+The offline KiCad S-expression parser covers the root sheet. The optional KiCad CLI XML-netlist adapter supplies source-resolved cross-sheet connectivity for full projects; it uses the same canonical model and graph/MCP queries. The standalone reader uses KiCad's SVG export for artwork and shows KiCad ERC separately from this project's rules.
+
 ## V0.1 scope
 
 - Modern KiCad `.kicad_sch` files
@@ -64,3 +66,7 @@ MCP host / AI agent
 `models.py` carries provenance and exposes a connectivity status. `graph.py` propagates that status and disallows successful firmware-pin validation on unverified data. `model_io.py` supports graph-validated offline JSON reload without trusting imported provenance claims. `Workspace` publishes a model/graph pair atomically only after successful parsing, retaining the old state on failure.
 
 `review.py` runs deterministic electrical rules and optional separately requested LLM hypotheses. Findings carry source-linked endpoints and coverage limitations; no report grants design approval. `cli.py` provides model/report exports independently of MCP. Read [vision and review](vision-and-review.md) for the schema, deployment boundaries and real-model validation gate.
+
+`knowledge.py` adds a local part-document evidence layer parallel to the electrical graph. It resolves exact manufacturer/MPN fields, verifies PDF hashes and page citations, and supplies provenance-preserving facts to review and reader. It does not infer the purchased part from a generic symbol, fetch external URLs, or turn transcribed limits into deterministic electrical verdicts. See [component knowledge](component-knowledge.md).
+
+`bom.py` optionally binds reference-to-part assignments from a UTF-8 CSV to the exact native KiCad source fingerprint, including child sheets. An assignment can fill absent symbol identity; conflicting symbol and BOM identity stays unresolved. Review rehashes the BOM and source before using the assignment.

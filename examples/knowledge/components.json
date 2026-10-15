@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "parts": [
+    {
+      "manufacturer": "Example Semi",
+      "mpn": "X100",
+      "documents": [
+        {
+          "id": "demo-ds",
+          "title": "Synthetic X100 datasheet",
+          "path": "demo-device.pdf",
+          "sha256": "5cfdacda3df01f50a93ae31ab3a75b79c48a8c82a3c6f0ba02c021035b87dc64",
+          "revision": "1.0"
+        }
+      ],
+      "facts": [
+        {
+          "id": "vin-max",
+          "name": "Maximum input voltage",
+          "value": "3.6 V",
+          "document_id": "demo-ds",
+          "page": 1,
+          "locator": "Electrical limits",
+          "quote": "Maximum input voltage 3.6 V"
+        }
+      ]
+    }
+  ]
+}

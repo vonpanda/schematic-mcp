@@ -23,6 +23,8 @@ mcp = MCPServer(
         "electrical connectivity. Signal tracing is net-based and never invents "
         "internal connectivity through ICs. For PDF/images call extract_schematic explicitly; "
         "this sends drawings to an LLM API. Vision data is UNVERIFIED, never an exact netlist. "
+        "Use open_schematic_project for complete KiCad hierarchy via local KiCad CLI. "
+        "Optionally load_component_knowledge from local pinned PDFs before review. "
         "Use review_schematic for local checks or review_schematic_with_llm for remote hypotheses."
     ),
 )
@@ -67,7 +69,7 @@ def extract_schematic(path: str, pages: list[int] | None = None) -> dict[str, An
 def review_schematic() -> dict[str, Any]:
     """Run local electrical rules and return evidence-linked findings and coverage limits."""
     try:
-        return {"ok": True, "review": run_review(workspace.require()[0])}
+        return {"ok": True, "review": run_review(workspace.require()[0], knowledge=workspace.knowledge, bom=workspace.bom)}
     except Exception as exc:
         return _error(exc)
 
@@ -80,7 +82,8 @@ def review_schematic_with_llm() -> dict[str, Any]:
     Findings are not engineering sign-off and must cite existing endpoint IDs.
     """
     try:
-        return {"ok": True, "review": run_review(workspace.require()[0], JSONClient(LLMConfig.from_env()))}
+        return {"ok": True, "review": run_review(workspace.require()[0], JSONClient(LLMConfig.from_env()),
+                                                   workspace.knowledge, workspace.bom)}
     except Exception as exc:
         return _error(exc)
 
@@ -90,10 +93,63 @@ def _error(exc: Exception) -> dict[str, Any]:
 
 
 @mcp.tool(annotations=_OPEN_SCHEMATIC)
+def load_component_knowledge(path: str) -> dict[str, Any]:
+    """Load a local curated part manifest; verifies each cited PDF hash; never downloads URLs."""
+    try:
+        knowledge = workspace.load_knowledge(path)
+        return {"ok": True, "parts": len(knowledge.parts), "manifest_sha256": knowledge.sha256}
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool(annotations=_OPEN_SCHEMATIC)
+def load_component_bom(path: str) -> dict[str, Any]:
+    """Load a source-bound local CSV BOM after opening a native KiCad schematic."""
+    try:
+        bom = workspace.load_bom(path)
+        return {"ok": True, "assigned": len(bom.assignments), "bom_sha256": bom.sha256,
+                "project_sha256": bom.project_sha256}
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def component_knowledge(reference: str) -> dict[str, Any]:
+    """Return exact MPN-matched facts, PDF provenance and unresolved status for one component."""
+    try:
+        schematic, graph = workspace.require()
+        if workspace.knowledge is None:
+            raise RuntimeError("no component knowledge loaded")
+        component = graph.component(reference)
+        if component is None:
+            raise KeyError(f"component not found: {reference}")
+        context = workspace.knowledge.context(schematic, workspace.bom)
+        match = next((part for part in context["matched"] if part["reference"] == reference), None)
+        return {"ok": True, "reference": reference, "status": "matched" if match else
+                next((status for status, refs in context["unresolved"].items() if reference in refs), "not_found"),
+                "part": match, "manifest_sha256": context["manifest_sha256"]}
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool(annotations=_OPEN_SCHEMATIC)
 def open_schematic(path: str) -> dict[str, Any]:
     """Open a local KiCad .kicad_sch file and build its canonical circuit graph."""
     try:
         return {"ok": True, "summary": workspace.open(path).summary()}
+    except Exception as exc:
+        return _error(exc)
+
+
+@mcp.tool(annotations=_OPEN_SCHEMATIC)
+def open_schematic_project(path: str) -> dict[str, Any]:
+    """Open a full KiCad project graph using KiCad CLI's XML netlist export.
+
+    Requires installed kicad-cli. The native schematic parser remains available
+    through open_schematic for root-sheet-only offline parsing.
+    """
+    try:
+        return {"ok": True, "summary": workspace.open_project(path).summary()}
     except Exception as exc:
         return _error(exc)
 

@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- Source-bound CSV BOM matching for exact manufacturer/MPN identities when symbol fields are absent; CLI review exports a fillable template, and reader/review/MCP reject stale or conflicting assignments.
+- Local exact-MPN component knowledge manifests with pinned PDF revisions/hashes, validated page citations, source coverage in reports/reader, and MCP lookup tools.
+- Portable offline schematic reader with KiCad SVG or PDF/image pages, searchable components/nets/findings, separate KiCad ERC results, page navigation, zoom, and source-linked highlights.
+- Full-project KiCad XML netlist adapter for reader and open_schematic_project / schematic-review --project, with child-sheet path/hash checks and position enrichment.
+- Repo-local skills for schematic intake, connectivity tracing, and evidence-based electrical review.
 - Explicit PDF/PNG/JPEG/WebP vision-LLM extraction with structured schema validation, page evidence, document fingerprint, scoped candidate nets and bounded rendering/API requests.
 - Configurable Chat Completions-compatible endpoint/model, strict schema or explicit JSON mode, redacted provider failures and bounded retries.
 - Local electrical review rules and separately requested LLM review hypotheses with validated endpoint citations and coverage limitations.
@@ -15,9 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Synthetic HTTP/CLI/MCP stdio integration tests, PDF/image rendering and adversarial/failure/recovery regression coverage.
 
 ### Changed
+- Repeated KiCad sheet instances now use source symbol UUIDs to recover visual positions when instance reference designators differ; KiCad XML NC endpoints are validated instead of silently skipped.
 - Canonical JSON now includes schema version, connectivity status, optional source evidence and provenance. Pin-map validation returns an additional `unverified` count and cannot pass for LLM/imported graphs.
 - Workspace model/graph publication is atomic and failed extraction/import preserves the previous document.
 - KiCad NC markers are retained on pins, including contradictory wired NC markers for review.
+- Power-output conflict rule now requires drivers from different components, avoiding same-package VCAP false positives.
 
 ### Validation boundary
 - No real-provider/model accuracy claim or production sign-off. Real API and human-labeled schematic acceptance remain required.
