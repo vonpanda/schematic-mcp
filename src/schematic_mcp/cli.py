@@ -47,7 +47,7 @@ def main() -> None:
         if args.bom:
             workspace.load_bom(args.bom)
         (args.output / "model.json").write_text(json.dumps(schematic.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
-        if schematic.provenance.get("project_sha256"):
+        if schematic.provenance.get("project_sha256") and (not schematic.sheets or schematic.provenance.get("hierarchy_complete")):
             (args.output / "bom-template.csv").write_text(template(schematic), encoding="utf-8")
         # Always save deterministic results before an optional remote review can fail.
         report = review_schematic(schematic, knowledge=workspace.knowledge, bom=workspace.bom)

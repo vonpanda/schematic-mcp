@@ -57,6 +57,8 @@ class Bom:
             raise ValueError("BOM must be an existing .csv file")
         if model.provenance.get("method") not in {"native_parser", "kicad_cli_netlist"}:
             raise ValueError("BOM binding requires a native KiCad schematic, not imported or vision data")
+        if model.sheets and not model.provenance.get("hierarchy_complete"):
+            raise ValueError("BOM binding requires the complete KiCad hierarchy; open the project with KiCad CLI")
         expected = model.provenance.get("project_sha256")
         if not isinstance(expected, str) or len(expected) != 64:
             raise ValueError("Native schematic has no project fingerprint")
@@ -99,6 +101,8 @@ class Bom:
         return result
 
     def verify(self, model: Schematic) -> None:
+        if model.provenance.get("method") not in {"native_parser", "kicad_cli_netlist"} or (model.sheets and not model.provenance.get("hierarchy_complete")):
+            raise ValueError("BOM binding requires a source-resolved complete KiCad model")
         if model.provenance.get("project_sha256") != self.project_sha256:
             raise ValueError("BOM belongs to a different schematic version")
         path = self.path.resolve()

@@ -11,6 +11,7 @@ from schematic_mcp.knowledge import KnowledgeBase
 from schematic_mcp.review import review_schematic
 from schematic_mcp.workspace import Workspace
 from schematic_mcp.reader import make_reader
+from schematic_mcp.models import SheetRef
 from mcp import Client
 import schematic_mcp.server as server
 
@@ -86,6 +87,15 @@ def test_bom_rejects_imported_model_and_root_escape(tmp_path):
     model.provenance["method"] = "imported_json"
     with pytest.raises(ValueError, match="native KiCad"):
         Bom.load(outside, model)
+
+
+def test_bom_rejects_root_only_parse_of_hierarchy(tmp_path):
+    model = Workspace().open(str(EXAMPLES / "minimal.kicad_sch"))
+    model.sheets.append(SheetRef(name="/child", file="child.kicad_sch"))
+    path = tmp_path / "bom.csv"
+    write_bom(path, model.provenance["project_sha256"], [("U1", "Example Semi", "X100")])
+    with pytest.raises(ValueError, match="complete KiCad hierarchy"):
+        Bom.load(path, model)
 
 
 def test_bom_fingerprint_changes_with_child_sheet_and_template(tmp_path):

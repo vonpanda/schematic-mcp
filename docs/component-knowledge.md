@@ -44,7 +44,7 @@ In MCP, call `load_component_knowledge(path)`, then `component_knowledge(referen
 
 ## BOM identity when the schematic has no MPN
 
-`schematic-review` writes `bom-template.csv` beside `model.json` for native KiCad files. Fill exact `Manufacturer` and `MPN` values for the references you know, and delete rows whose identity is unknown. Keep the `Project SHA256` column unchanged. It fingerprints the root and every child sheet, so a BOM from another revision is rejected. The CSV is UTF-8 with exactly these columns, in this order:
+`schematic-review` writes `bom-template.csv` beside `model.json` for native KiCad files. Use `--project` for a hierarchy; a root-only parse of a multi-sheet project cannot create or accept a BOM binding. Fill exact `Manufacturer` and `MPN` values for the references you know, and delete rows whose identity is unknown. Keep the `Project SHA256` column unchanged. It fingerprints the root and every child sheet, so a BOM from another revision is rejected. The CSV is UTF-8 with exactly these columns, in this order:
 
 ```csv
 Reference,Manufacturer,MPN,Project SHA256
