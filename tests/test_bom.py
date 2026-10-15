@@ -104,7 +104,12 @@ def test_bom_fingerprint_changes_with_child_sheet_and_template(tmp_path):
     assert all(row["Project SHA256"] == model.provenance["project_sha256"] for row in rows)
 
 
-def test_reader_embeds_bom_evidence_and_rejects_old_revision(tmp_path):
+def test_reader_embeds_bom_evidence_and_rejects_old_revision(tmp_path, monkeypatch):
+    from test_reader import fake_artwork
+    monkeypatch.setattr("schematic_mcp.reader._kicad_cli", lambda explicit: "fixture-cli")
+    monkeypatch.setattr("schematic_mcp.reader._render_kicad", fake_artwork)
+    monkeypatch.setattr("schematic_mcp.reader._kicad_erc",
+                        lambda source, cli: {"status": "complete", "findings": []})
     model = Workspace().open(str(EXAMPLES / "minimal.kicad_sch"))
     bom_path = tmp_path / "bom.csv"
     write_bom(bom_path, model.provenance["project_sha256"], [("U1", "Example Semi", "X100")])
